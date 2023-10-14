@@ -1,0 +1,18 @@
+{
+    "name": "j5ik2o/event-store-adapter-php",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "J5ik2o\\EventStoreAdapterPhp\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Junichi Kato",
+            "email": "j5ik2o@gmail.com"
+        }
+    ],
+    "require": {
+        "aws/aws-sdk-php": "^3.283"
+    }
+}
