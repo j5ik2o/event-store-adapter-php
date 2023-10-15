@@ -6,16 +6,20 @@
 
 This library is designed to turn DynamoDB into an Event Store for Event Sourcing.
 
+The Status is WIP.
+
 ## Usage
 
 You can easily implement an Event Sourcing-enabled repository using EventStore.
 
 ```php
+// TODO
 ```
 
 The following is an example of the repository usage.
 
 ```php
+// TODO
 ```
 
 ## Table Specifications
