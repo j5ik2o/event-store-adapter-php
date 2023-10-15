@@ -1,6 +1,10 @@
 <?php
 
+namespace J5ik2o\EventStoreAdapterPhp;
+
 final class DefaultKeyResolver implements KeyResolver {
+    public function __construct() {}
+
     public function resolvePartitionKey(AggregateId $aggregateId, int $shardCount): string {
         $remainder = abs(crc32($aggregateId->getValue())) % $shardCount;
         return sprintf("%s-%d", $aggregateId->getTypeName(), $remainder);

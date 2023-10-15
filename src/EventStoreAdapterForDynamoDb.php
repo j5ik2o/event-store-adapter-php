@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 
-require './vendor/autoload.php';
+namespace J5ik2o\EventStoreAdapterPhp;
 
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Marshaler;

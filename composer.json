@@ -19,7 +19,7 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "J5ik2o\\EventStoreAdapterPhp\\": "tests/"
+            "J5ik2o\\EventStoreAdapterPhp\\Tests\\": "tests/"
         }
     },
     "require-dev": {
