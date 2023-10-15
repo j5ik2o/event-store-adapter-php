@@ -1,5 +1,4 @@
-<?php
-
+<?php declare(strict_types=1);
 class DefaultEventSerializer implements EventSerializer {
     public function serialize(Event $event): string {
         return json_encode($event);

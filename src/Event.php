@@ -1,5 +1,4 @@
-<?php
-
+<?php declare(strict_types=1);
 
 interface Event {
     public function getId(): string;

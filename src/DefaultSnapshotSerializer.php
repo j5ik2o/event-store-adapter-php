@@ -1,6 +1,6 @@
-<?php
+<?php declare(strict_types=1);
 
-class DefaultSnapshotSerializer implements SnapshotSerializer {
+final class DefaultSnapshotSerializer implements SnapshotSerializer {
 
     public function serialize(Aggregate $aggregate): string {
         return json_encode($aggregate);

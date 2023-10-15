@@ -1,4 +1,5 @@
-<?php
+<?php declare(strict_types=1);
+
 require './vendor/autoload.php';
 
 use Aws\DynamoDb\DynamoDbClient;
@@ -24,6 +25,13 @@ class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
      * @var callable
      */
     private $snapshotConverter;
+
+    private bool $keepSnapshot;
+
+    private int $keepSnapshotCount;
+
+    private int $deleteTtlInMillSec;
+
     private KeyResolver $keyResolver;
     private EventSerializer $eventSerializer;
     private SnapshotSerializer $snapshotSerializer;
@@ -38,6 +46,9 @@ class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
                                 int                $shardCount,
                                 callable           $eventConverter,
                                 callable           $snapshotConverter,
+                                bool $keepSnapshot,
+                                int  $keepSnapshotCount,
+                                int  $deleteTtlInMillSec,
                                 KeyResolver        $keyResolver,
                                 EventSerializer    $eventSerializer,
                                 SnapshotSerializer $snapshotSerializer) {
@@ -50,6 +61,9 @@ class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
         $this->shardCount = $shardCount;
         $this->eventConverter = $eventConverter;
         $this->snapshotConverter = $snapshotConverter;
+        $this->keepSnapshot = $keepSnapshot;
+        $this->deleteTtlInMillSec = $deleteTtlInMillSec;
+        $this->keepSnapshotCount = $keepSnapshotCount;
         $this->keyResolver = $keyResolver;
         $this->eventSerializer = $eventSerializer;
         $this->snapshotSerializer = $snapshotSerializer;
@@ -225,7 +239,7 @@ class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
         ];
         $response = $this->client->query($request);
         $result = [];
-        foreach($response['Items'] as $item) {
+        foreach ($response['Items'] as $item) {
             $payload = $item['payload']['B'];
             $payloadMap = $this->eventSerializer->deserialize($payload);
             $event = ($this->eventConverter)($payloadMap);
