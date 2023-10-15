@@ -7,7 +7,7 @@ use Aws\DynamoDb\Marshaler;
 
 date_default_timezone_set('UTC');
 
-class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
+final class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
     private DynamoDbClient $client;
 
     private string $journalTableName;
@@ -106,7 +106,7 @@ class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
         ];
     }
 
-    private function updateSnapshot(Event $event, int $seqNr, int $version, ?Aggregate $aggregate) {
+    private function updateSnapshot(Event $event, int $seqNr, int $version, ?Aggregate $aggregate): array {
         $pkey = $this->keyResolver->resolvePartitionKey($event->getAggregateId(), $this->shardCount);
         $skey = $this->keyResolver->resolveSortKey($event->getAggregateId(), $seqNr);
         $update = [
@@ -137,7 +137,7 @@ class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
         return $update;
     }
 
-    private function putJournal(Event $event) {
+    private function putJournal(Event $event): array {
         $pkey = $this->keyResolver->resolvePartitionKey($event->getAggregateId(), $this->shardCount);
         $skey = $this->keyResolver->resolveSortKey($event->getAggregateId(), $event->getSequenceNumber());
         $payload = $this->eventSerializer->serialize($event);
@@ -157,7 +157,7 @@ class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
         ];
     }
 
-    private function createEventAndSnapshot(Event $event, Aggregate $aggregate) {
+    private function createEventAndSnapshot(Event $event, Aggregate $aggregate): void {
         $putJournal = $this->putJournal($event);
         $putSnapshot = $this->putSnapshot($event, 0, $aggregate);
         $transactItems = ['TransactItems' => [$putJournal, $putSnapshot]];
@@ -165,7 +165,7 @@ class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
         $this->client->transactWriteItems($transactItems);
     }
 
-    private function updateEventAndSnapshotOpt(Event $event, int $version, ?Aggregate $aggregate) {
+    private function updateEventAndSnapshotOpt(Event $event, int $version, ?Aggregate $aggregate): void {
         $putJournal = $this->putJournal($event);
         $updateSnapshot = $this->updateSnapshot($event, 0, $version, $aggregate);
         $transactItems = ['TransactItems' => [$putJournal, $updateSnapshot]];
@@ -173,13 +173,13 @@ class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
     }
 
 
-    public function persistEvent(Event $event, int $version) {
+    public function persistEvent(Event $event, int $version): void {
         if ($event->isCreated()) throw new IllegalArgumentException('event is created type');
         $this->updateEventAndSnapshotOpt($event, $version, null);
         // TODO: tryPurgeExcessSnapshots
     }
 
-    public function persistEventAndSnapshot(Event $event, Aggregate $aggregate) {
+    public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): void {
         if ($event->isCreated()) {
             $this->createEventAndSnapshot($event, $aggregate);
         } else {

@@ -1,0 +1,19 @@
+version: '3'
+services:
+  dynamodb-local:
+    image: amazon/dynamodb-local:1.18.0
+    hostname: dynamodb-local
+    environment:
+      JAVA_OPTS: -Xms2g -Xmx2g
+    ports:
+      - "8000:8000"
+    command: "-jar DynamoDBLocal.jar -port 8000 -inMemory -sharedDb"
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    ports:
+      - "8003:8001"
+    environment:
+      DYNAMO_ENDPOINT: dynamodb-local:8000
+      AWS_DEFAULT_REGION: ap-northeast-1
+    depends_on:
+      - dynamodb-local

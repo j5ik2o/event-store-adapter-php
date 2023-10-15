@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<phpunit bootstrap="vendor/autoload.php" colors="true" stderr="true" cacheDirectory=".phpunit.cache">
+  <coverage>
+    <report>
+      <html outputDirectory="coverage/"/>
+    </report>
+  </coverage>
+  <testsuites>
+    <testsuite name="Unit">
+      <directory suffix="Test.php">./tests/Unit</directory>
+    </testsuite>
+  </testsuites>
+  <logging/>
+  <source/>
+</phpunit>

@@ -10,9 +10,9 @@ interface EventStoreAdapter {
 
     public function withKeyResolver(KeyResolver $keyResolver): EventStoreAdapter;
 
-    public function persistEvent(Event $event, int $version);
+    public function persistEvent(Event $event, int $version): void;
 
-    public function persistEventAndSnapshot(Event $event, Aggregate $aggregate);
+    public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): void;
 
 
     public function getLatestSnapshotById(AggregateId $aggregateId): ?Aggregate;
