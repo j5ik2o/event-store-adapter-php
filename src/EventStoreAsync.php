@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace J5ik2o\EventStoreAdapterPhp;
 
-use GuzzleHttp\Promise\Promise;
 use GuzzleHttp\Promise\PromiseInterface;
 
 interface EventStoreAsync extends EventStoreOptions {
@@ -13,24 +12,24 @@ interface EventStoreAsync extends EventStoreOptions {
      *
      * @param Event $event
      * @param int $version
-     * @return Promise<void>
+     * @return PromiseInterface
      */
-    public function persistEvent(Event $event, int $version): Promise;
+    public function persistEvent(Event $event, int $version): PromiseInterface;
 
     /**
      * Persist an event to the event store and create a snapshot.
      *
      * @param Event $event
      * @param Aggregate $aggregate
-     * @return Promise
+     * @return PromiseInterface
      */
-    public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): Promise;
+    public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): PromiseInterface;
 
     /**
      * Gets the latest snapshot for an aggregate.
      *
      * @param AggregateId $aggregateId
-     * @return Promise<?Aggregate>
+     * @return PromiseInterface
      */
     public function getLatestSnapshotById(AggregateId $aggregateId): PromiseInterface;
 
@@ -39,7 +38,7 @@ interface EventStoreAsync extends EventStoreOptions {
      *
      * @param AggregateId $aggregateId
      * @param int $sequenceNumber
-     * @return Promise<array<Event>>
+     * @return PromiseInterface
      */
     public function getEventsByIdSinceSequenceNumber(AggregateId $aggregateId, int $sequenceNumber): PromiseInterface;
 }

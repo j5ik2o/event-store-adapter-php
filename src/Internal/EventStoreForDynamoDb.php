@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace J5ik2o\EventStoreAdapterPhp\Internal;
 
 use Aws\DynamoDb\DynamoDbClient;
-use Aws\DynamoDb\Marshaler;
 use Exception;
 use J5ik2o\EventStoreAdapterPhp\Aggregate;
 use J5ik2o\EventStoreAdapterPhp\AggregateId;
@@ -47,7 +46,6 @@ final class EventStoreForDynamoDb implements EventStore {
     private readonly KeyResolver $keyResolver;
     private readonly EventSerializer $eventSerializer;
     private readonly SnapshotSerializer $snapshotSerializer;
-    private readonly Marshaler $marshaler;
 
     private readonly EventStoreSupport $eventStoreSupport;
 
@@ -69,7 +67,6 @@ final class EventStoreForDynamoDb implements EventStore {
         ?SnapshotSerializer $snapshotSerializer = null
     ) {
         $this->client = $client;
-        $this->marshaler = new Marshaler();
         $this->journalTableName = $journalTableName;
         $this->snapshotTableName = $snapshotTableName;
         $this->journalAidIndexName = $journalAidIndexName;
@@ -288,12 +285,9 @@ final class EventStoreForDynamoDb implements EventStore {
                 $aggregate = $this->eventStoreSupport->convertToSnapshot($payload);
                 if ($aggregate instanceof Aggregate) {
                     return $aggregate->withVersion((int)$version);
-                } else {
-                    throw new Exception("Failed to deserialize aggregate");
                 }
-            } else {
-                throw new Exception("Failed to deserialize aggregate");
             }
+            throw new Exception("Failed to deserialize aggregate");
         }
     }
 
