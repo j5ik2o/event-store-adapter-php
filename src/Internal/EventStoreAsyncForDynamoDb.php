@@ -3,9 +3,7 @@
 namespace J5ik2o\EventStoreAdapterPhp\Internal;
 
 use Aws\DynamoDb\DynamoDbClient;
-use Aws\DynamoDb\Marshaler;
 use Exception;
-use GuzzleHttp\Promise\Promise;
 use GuzzleHttp\Promise\PromiseInterface;
 use J5ik2o\EventStoreAdapterPhp\Aggregate;
 use J5ik2o\EventStoreAdapterPhp\AggregateId;
@@ -47,7 +45,6 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
     private readonly KeyResolver $keyResolver;
     private readonly EventSerializer $eventSerializer;
     private readonly SnapshotSerializer $snapshotSerializer;
-    private readonly Marshaler $marshaler;
 
     private readonly EventStoreSupport $eventStoreSupport;
 
@@ -69,7 +66,6 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
         ?SnapshotSerializer $snapshotSerializer = null
     ) {
         $this->client = $client;
-        $this->marshaler = new Marshaler();
         $this->journalTableName = $journalTableName;
         $this->snapshotTableName = $snapshotTableName;
         $this->journalAidIndexName = $journalAidIndexName;
@@ -239,7 +235,7 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
         );
     }
 
-    private function createEventAndSnapshot(Event $event, Aggregate $aggregate): Promise {
+    private function createEventAndSnapshot(Event $event, Aggregate $aggregate): PromiseInterface {
         $putJournal = $this->eventStoreSupport->putJournal($event);
         $putSnapshot = $this->eventStoreSupport->putSnapshot($event, 0, $aggregate);
         $transactItems = ['TransactItems' => [$putJournal, $putSnapshot]];
@@ -247,7 +243,7 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
         return $this->client->transactWriteItemsAsync($transactItems);
     }
 
-    private function updateEventAndSnapshotOpt(Event $event, int $version, ?Aggregate $aggregate): Promise {
+    private function updateEventAndSnapshotOpt(Event $event, int $version, ?Aggregate $aggregate): PromiseInterface {
         $putJournal = $this->eventStoreSupport->putJournal($event);
         $updateSnapshot = $this->eventStoreSupport->updateSnapshot($event, 0, $version, $aggregate);
         $transactItems = ['TransactItems' => [$putJournal, $updateSnapshot]];
@@ -257,14 +253,14 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
     /**
      * @throws IllegalArgumentException
      */
-    public function persistEvent(Event $event, int $version): Promise {
+    public function persistEvent(Event $event, int $version): PromiseInterface {
         if ($event->isCreated()) {
             throw new IllegalArgumentException('event is created type');
         }
         return $this->updateEventAndSnapshotOpt($event, $version, null);
     }
 
-    public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): Promise {
+    public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): PromiseInterface {
         if ($event->isCreated()) {
             return $this->createEventAndSnapshot($event, $aggregate);
         } else {
@@ -286,12 +282,9 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
                     $aggregate = $this->eventStoreSupport->convertToSnapshot($payload);
                     if ($aggregate instanceof Aggregate) {
                         return $aggregate->withVersion((int)$version);
-                    } else {
-                        throw new Exception("Failed to deserialize aggregate");
                     }
-                } else {
-                    throw new Exception("Failed to deserialize aggregate");
                 }
+                throw new Exception("Failed to deserialize aggregate");
             }
         });
     }
