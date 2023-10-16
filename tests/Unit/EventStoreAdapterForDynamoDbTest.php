@@ -23,6 +23,9 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
         restore_error_handler();
     }
 
+    /**
+     * @throws \Exception
+     */
     public function testPersist(): void {
         $aws = new Sdk([
             'endpoint' => 'http://localhost:8000',
@@ -104,6 +107,11 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
         } else {
             $this->fail();
         }
+
+        [$userAccount2, $event2] = $userAccountResult->rename("test-2");
+
+        $eventStoreAdapter->persistEvent($event2, $userAccount2->getVersion());
+
     }
 
     /**

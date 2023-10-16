@@ -2,6 +2,7 @@
 
 namespace J5ik2o\EventStoreAdapterPhp\Tests;
 
+use Ulid\Ulid;
 use J5ik2o\EventStoreAdapterPhp\AggregateId;
 
 final class UserAccountId implements AggregateId {
@@ -12,7 +13,7 @@ final class UserAccountId implements AggregateId {
     public function __construct(?string $value = null) {
         $this->typeName = "user-account";
         if ($value === null) {
-            $this->value = uniqid('', true);
+            $this->value = (string)Ulid::generate();
         } else {
             $this->value = $value;
         }

@@ -5,6 +5,7 @@ namespace J5ik2o\EventStoreAdapterPhp\Tests;
 use DateTimeImmutable;
 use J5ik2o\EventStoreAdapterPhp\Aggregate;
 use J5ik2o\EventStoreAdapterPhp\AggregateId;
+use Ulid\Ulid;
 
 final class UserAccount implements Aggregate {
     private UserAccountId $id;
@@ -33,7 +34,7 @@ final class UserAccount implements Aggregate {
      * @return array{0: UserAccount, 1: UserAccountCreated}
      */
     public static function create(UserAccountId $id, string $name): array {
-        $eventId = uniqid("user-account-event-", true);
+        $eventId = "user-account-event-" . Ulid::generate();
         $now = new DateTimeImmutable('now');
         $millSec = $now->getTimestamp() * 1000;
         $aggregate = new UserAccount($id, 1, $name, 1);
@@ -64,7 +65,7 @@ final class UserAccount implements Aggregate {
      */
     public function rename(string $name): array {
         if ($this->name === $name) throw new AlreadyRenamedException("Failed to rename");
-        $eventId = uniqid("user-account-event-", true);
+        $eventId = "user-account-event-" . Ulid::generate();
         $now = new DateTimeImmutable('now');
         $millSec = $now->getTimestamp() * 1000;
         $aggregate = new UserAccount($this->id, $this->sequenceNumber, $name, $this->version);
