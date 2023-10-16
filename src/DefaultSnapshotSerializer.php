@@ -4,11 +4,25 @@ namespace J5ik2o\EventStoreAdapterPhp;
 
 final class DefaultSnapshotSerializer implements SnapshotSerializer {
 
+    /**
+     * @throws SerializationException
+     */
     public function serialize(Aggregate $aggregate): string {
-        return json_encode($aggregate, JSON_UNESCAPED_UNICODE);
+        $result = json_encode($aggregate, JSON_UNESCAPED_UNICODE);
+        if (!$result) {
+            throw new SerializationException("Failed to serialize aggregate");
+        }
+        return $result;
     }
 
+    /**
+     * @throws SerializationException
+     */
     public function deserialize(string $data): array {
-        return json_decode($data, true);
+        $result =  json_decode($data, true);
+        if (!is_array($result)) {
+            throw new SerializationException("Failed to deserialize aggregate");
+        }
+        return $result;
     }
 }
