@@ -74,7 +74,7 @@ final class EventStoreForDynamoDbTest extends TestCase {
         $eventSerializer = new DefaultEventSerializer();
         $snapshotSerializer = new DefaultSnapshotSerializer();
 
-        $eventStoreAdapter = new EventStoreForDynamoDb(
+        $eventStore = new EventStoreForDynamoDb(
             $client,
             $journalTableName,
             $snapshotTableName,
@@ -92,11 +92,10 @@ final class EventStoreForDynamoDbTest extends TestCase {
         );
 
         $userAccountId = new UserAccountId();
-        var_dump($userAccountId);
         [$userAccount, $event] = UserAccount::create($userAccountId, "test");
-        $eventStoreAdapter->persistEventAndSnapshot($event, $userAccount);
+        $eventStore->persistEventAndSnapshot($event, $userAccount);
 
-        $result = $eventStoreAdapter->getLatestSnapshotById($userAccountId);
+        $result = $eventStore->getLatestSnapshotById($userAccountId);
         $userAccountResult = null;
         if ($result instanceof UserAccount) {
             $userAccountResult = $result;
@@ -111,12 +110,12 @@ final class EventStoreForDynamoDbTest extends TestCase {
 
         [$userAccount2, $event2] = $userAccountResult->rename("test-2");
 
-        $eventStoreAdapter->persistEvent($event2, $userAccount2->getVersion());
+        $eventStore->persistEvent($event2, $userAccount2->getVersion());
 
-        $snapshot2 = $eventStoreAdapter->getLatestSnapshotById($userAccountId);
+        $snapshot2 = $eventStore->getLatestSnapshotById($userAccountId);
         if ($snapshot2 instanceof UserAccount) {
             /** @var array<UserAccountEvent> $events */
-            $events = $eventStoreAdapter->getEventsByIdSinceSequenceNumber($userAccountId, $snapshot2->getSequenceNumber());
+            $events = $eventStore->getEventsByIdSinceSequenceNumber($userAccountId, $snapshot2->getSequenceNumber());
             $aggregate2 = UserAccount::replay($events, $snapshot2);
             $this->assertTrue($aggregate2->getName() === "test-2");
         }

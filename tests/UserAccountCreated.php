@@ -6,15 +6,15 @@ use DateTimeImmutable;
 
 final class UserAccountCreated implements UserAccountEvent {
 
-    private string $typeName;
-    private string $id;
+    private readonly string $typeName;
+    private readonly string $id;
 
-    private UserAccountId $aggregateId;
-    private int $sequenceNumber;
+    private readonly UserAccountId $aggregateId;
+    private readonly int $sequenceNumber;
 
-    private string $name;
+    private readonly string $name;
 
-    private DateTimeImmutable $occurredAt;
+    private readonly DateTimeImmutable $occurredAt;
 
     public function __construct(string $id, UserAccountId $aggregateId, int $sequenceNumber, string $name, DateTimeImmutable $occurredAt) {
         $this->typeName = "user-account-created";

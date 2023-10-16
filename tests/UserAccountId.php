@@ -7,8 +7,8 @@ use J5ik2o\EventStoreAdapterPhp\AggregateId;
 
 final class UserAccountId implements AggregateId {
 
-    private string $typeName;
-    private string $value;
+    private readonly string $typeName;
+    private readonly string $value;
 
     public function __construct(?string $value = null) {
         $this->typeName = "user-account";

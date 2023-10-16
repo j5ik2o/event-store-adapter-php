@@ -7,15 +7,15 @@ use Aws\DynamoDb\Marshaler;
 use Exception;
 
 final class EventStoreForDynamoDb implements EventStore {
-    private DynamoDbClient $client;
+    private readonly DynamoDbClient $client;
 
-    private string $journalTableName;
+    private readonly string $journalTableName;
 
-    private string $snapshotTableName;
-    private string $journalAidIndexName;
-    private string $snapshotAidIndexName;
+    private readonly string $snapshotTableName;
+    private readonly string $journalAidIndexName;
+    private readonly string $snapshotAidIndexName;
 
-    private int $shardCount;
+    private readonly int $shardCount;
     /**
      * @var callable
      */
@@ -25,16 +25,16 @@ final class EventStoreForDynamoDb implements EventStore {
      */
     private $snapshotConverter;
 
-    private bool $keepSnapshot;
+    private readonly bool $keepSnapshot;
 
-    private int $keepSnapshotCount;
+    private readonly int $keepSnapshotCount;
 
-    private int $deleteTtlInMillSec;
+    private readonly int $deleteTtlInMillSec;
 
-    private KeyResolver $keyResolver;
-    private EventSerializer $eventSerializer;
-    private SnapshotSerializer $snapshotSerializer;
-    private Marshaler $marshaler;
+    private readonly KeyResolver $keyResolver;
+    private readonly EventSerializer $eventSerializer;
+    private readonly SnapshotSerializer $snapshotSerializer;
+    private readonly Marshaler $marshaler;
 
 
     public function __construct(DynamoDbClient     $client,

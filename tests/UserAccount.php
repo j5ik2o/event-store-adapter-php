@@ -8,10 +8,10 @@ use J5ik2o\EventStoreAdapterPhp\AggregateId;
 use Ulid\Ulid;
 
 final class UserAccount implements Aggregate {
-    private UserAccountId $id;
-    private int $sequenceNumber;
-    private string $name;
-    private int $version;
+    private readonly UserAccountId $id;
+    private readonly int $sequenceNumber;
+    private readonly string $name;
+    private readonly int $version;
 
     public function __construct(UserAccountId $id, int $sequenceNumber, string $name, int $version) {
         $this->id = $id;
@@ -96,7 +96,7 @@ final class UserAccount implements Aggregate {
      */
     public function rename(string $name): array {
         if ($this->name === $name) throw new AlreadyRenamedException("Failed to rename");
-        $aggregate = new UserAccount($this->id, $this->sequenceNumber, $name, $this->version);
+        $aggregate = new UserAccount($this->id, $this->sequenceNumber + 1, $name, $this->version);
         $event = UserAccountEventFactory::ofRenamed($this->id, $this->sequenceNumber + 1, $name);
         return [$aggregate, $event];
     }
