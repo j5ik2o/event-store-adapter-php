@@ -240,11 +240,13 @@ final class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
         ];
         $response = $this->client->query($request);
         $result = [];
-        foreach ($response['Items'] as $item) {
-            $payload = $item['payload']['B'];
-            $payloadMap = $this->eventSerializer->deserialize($payload);
-            $event = ($this->eventConverter)($payloadMap);
-            $result[] = $event;
+        if (is_iterable($response['Items'])) {
+            foreach ($response['Items'] as $item) {
+                $payload = $item["payload"]["S"];
+                $payloadMap = $this->eventSerializer->deserialize($payload);
+                $event = ($this->eventConverter)($payloadMap);
+                $result[] = $event;
+            }
         }
         return $result;
     }

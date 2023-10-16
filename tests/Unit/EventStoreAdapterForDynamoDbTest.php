@@ -46,25 +46,26 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
         $eventConverter = function ($eventMap) {
             $typeName = $eventMap["typeName"];
             $id = $eventMap["id"];
-            $aggregateId = $eventMap["aggregateId"];
+            $aggregateIdValue = $eventMap["aggregateId"]["value"];
+            $aggregateId = new UserAccountId($aggregateIdValue);
             $sequenceNumber = $eventMap["sequenceNumber"];
             $occurredAt = $eventMap["occurredAt"];
             if ($typeName === "user-account-created") {
                 $name = $eventMap["name"];
                 return new UserAccountCreated($id, $aggregateId, $sequenceNumber, $name, $occurredAt);
-            } elseif ($typeName === "user-account-named") {
+            } elseif ($typeName === "user-account-renamed") {
                 $name = $eventMap["name"];
                 return new UserAccountRenamed($id, $aggregateId, $sequenceNumber, $name, $occurredAt);
             } else {
                 return null;
             }
         };
-        $snapshotConverter = function ($eventMap) {
-            $idValue = $eventMap["id"]["value"];
+        $snapshotConverter = function ($snapshotMap) {
+            $idValue = $snapshotMap["id"]["value"];
             $id = new UserAccountId($idValue);
-            $sequenceNumber = $eventMap["sequenceNumber"];
-            $name = $eventMap["name"];
-            $version = $eventMap["version"];
+            $sequenceNumber = $snapshotMap["sequenceNumber"];
+            $name = $snapshotMap["name"];
+            $version = $snapshotMap["version"];
             return new UserAccount($id, $sequenceNumber, $name, $version);
         };
         $keepSnapshot = true;
@@ -112,6 +113,13 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
 
         $eventStoreAdapter->persistEvent($event2, $userAccount2->getVersion());
 
+        $snapshot2 = $eventStoreAdapter->getLatestSnapshotById($userAccountId);
+        if ($snapshot2 instanceof UserAccount) {
+            /** @var array<UserAccountEvent> $events */
+            $events = $eventStoreAdapter->getEventsByIdSinceSequenceNumber($userAccountId, $snapshot2->getSequenceNumber());
+            $aggregate2 = UserAccount::replay($events, $snapshot2);
+            $this->assertTrue($aggregate2->getName() === "test-2");
+        }
     }
 
     /**
@@ -122,11 +130,13 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
      */
     public function createJournalTable(\Aws\DynamoDb\DynamoDbClient $client, string $journalTableName, string $journalAidIndexName): void {
         $response = $client->listTables();
-        foreach ($response['TableNames'] as $element) {
-            if ($element === $journalTableName) {
-                $client->deleteTable([
-                    'TableName' => $journalTableName,
-                ]);
+        if (is_iterable($response['TableNames'])) {
+            foreach ($response['TableNames'] as $element) {
+                if ($element === $journalTableName) {
+                    $client->deleteTable([
+                        'TableName' => $journalTableName,
+                    ]);
+                }
             }
         }
 
@@ -197,11 +207,13 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
      */
     public function createSnapshotTable(\Aws\DynamoDb\DynamoDbClient $client, string $snapshotTableName, string $snapshotAidIndexName): void {
         $response = $client->listTables();
-        foreach ($response['TableNames'] as $element) {
-            if ($element === $snapshotTableName) {
-                $client->deleteTable([
-                    'TableName' => $snapshotTableName,
-                ]);
+        if (is_iterable($response['TableNames'])) {
+            foreach ($response['TableNames'] as $element) {
+                if ($element === $snapshotTableName) {
+                    $client->deleteTable([
+                        'TableName' => $snapshotTableName,
+                    ]);
+                }
             }
         }
         $client->createTable([

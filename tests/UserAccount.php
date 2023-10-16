@@ -42,12 +42,42 @@ final class UserAccount implements Aggregate {
         return [$aggregate, $event];
     }
 
+    /**
+     * @param array<UserAccountEvent> $events
+     * @param UserAccount $snapshot
+     * @return UserAccount
+     * @throws AlreadyRenamedException
+     */
+    public static function replay(array $events, UserAccount $snapshot): UserAccount {
+        $aggregate = $snapshot;
+        foreach ($events as $event) {
+            $aggregate = $aggregate->applyEvent($event);
+        }
+        return $aggregate;
+    }
+
+    /**
+     * @throws AlreadyRenamedException
+     */
+    public function applyEvent(UserAccountEvent $event): UserAccount {
+        if ($event instanceof UserAccountRenamed) {
+            [$aggregate,] = $this->rename($event->getName());
+            return $aggregate;
+        } else {
+            return $this;
+        }
+    }
+
     public function getId(): AggregateId {
         return $this->id;
     }
 
     public function getSequenceNumber(): int {
         return $this->sequenceNumber;
+    }
+
+    public function getName(): string {
+        return $this->name;
     }
 
     public function getVersion(): int {
