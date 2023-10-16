@@ -25,5 +25,5 @@ jobs:
       run: composer install --prefer-dist --no-progress
     - name: Run test suite
       run: |
-        docker-compose up -d --abort-on-container-exit
+        docker-compose up -d
         composer run test
