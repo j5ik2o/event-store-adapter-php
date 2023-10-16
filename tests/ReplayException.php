@@ -2,10 +2,10 @@
 
 namespace J5ik2o\EventStoreAdapterPhp\Tests;
 
-use Throwable;
 use Exception;
+use Throwable;
 
-class AlreadyRenamedException extends Exception {
+final class ReplayException extends Exception {
     public function __construct(string $message = "", int $code = 0, Throwable $previous = null) {
         parent::__construct($message, $code, $previous);
     }

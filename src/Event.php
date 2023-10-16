@@ -2,6 +2,8 @@
 
 namespace J5ik2o\EventStoreAdapterPhp;
 
+use DateTimeImmutable;
+
 interface Event extends \JsonSerializable {
     public function getId(): string;
 
@@ -13,5 +15,5 @@ interface Event extends \JsonSerializable {
 
     public function isCreated(): bool;
 
-    public function getOccurredAt(): int;
+    public function getOccurredAt(): DateTimeImmutable;
 }

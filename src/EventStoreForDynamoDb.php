@@ -6,9 +6,7 @@ use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Marshaler;
 use Exception;
 
-date_default_timezone_set('UTC');
-
-final class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
+final class EventStoreForDynamoDb implements EventStore {
     private DynamoDbClient $client;
 
     private string $journalTableName;
@@ -70,19 +68,19 @@ final class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
         $this->snapshotSerializer = $snapshotSerializer;
     }
 
-    public function withKeepSnapshot(bool $keepSnapshot): EventStoreAdapter {
+    public function withKeepSnapshot(bool $keepSnapshot): EventStore {
         return $this;
     }
 
-    public function withDeleteTtl(int $deleteTtlInMillSec): EventStoreAdapter {
+    public function withDeleteTtl(int $deleteTtlInMillSec): EventStore {
         return $this;
     }
 
-    public function withKeepSnapshotCount(int $keepSnapshotCount): EventStoreAdapter {
+    public function withKeepSnapshotCount(int $keepSnapshotCount): EventStore {
         return $this;
     }
 
-    public function withKeyResolver(KeyResolver $keyResolver): EventStoreAdapter {
+    public function withKeyResolver(KeyResolver $keyResolver): EventStore {
         return $this;
     }
 
@@ -151,7 +149,7 @@ final class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
                     'aid' => $event->getAggregateId()->asString(),
                     'seq_nr' => $event->getSequenceNumber(),
                     'payload' => $payload,
-                    'occurred_at' => $event->getOccurredAt(),
+                    'occurred_at' => $event->getOccurredAt()->getTimestamp() * 1000,
                 ]),
                 'ConditionExpression' => 'attribute_not_exists(pkey) AND attribute_not_exists(skey)'
             ]

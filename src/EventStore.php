@@ -2,20 +2,19 @@
 
 namespace J5ik2o\EventStoreAdapterPhp;
 
-interface EventStoreAdapter {
+interface EventStore {
 
-    public function withKeepSnapshot(bool $keepSnapshot): EventStoreAdapter;
+    public function withKeepSnapshot(bool $keepSnapshot): EventStore;
 
-    public function withDeleteTtl(int $deleteTtlInMillSec): EventStoreAdapter;
+    public function withDeleteTtl(int $deleteTtlInMillSec): EventStore;
 
-    public function withKeepSnapshotCount(int $keepSnapshotCount): EventStoreAdapter;
+    public function withKeepSnapshotCount(int $keepSnapshotCount): EventStore;
 
-    public function withKeyResolver(KeyResolver $keyResolver): EventStoreAdapter;
+    public function withKeyResolver(KeyResolver $keyResolver): EventStore;
 
     public function persistEvent(Event $event, int $version): void;
 
     public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): void;
-
 
     public function getLatestSnapshotById(AggregateId $aggregateId): ?Aggregate;
 

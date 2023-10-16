@@ -1,6 +1,8 @@
-<?php
+<?php declare(strict_types=1);
 
 namespace J5ik2o\EventStoreAdapterPhp\Tests;
+
+use DateTimeImmutable;
 
 final class UserAccountRenamed implements UserAccountEvent {
 
@@ -12,9 +14,9 @@ final class UserAccountRenamed implements UserAccountEvent {
 
     private string $name;
 
-    private int $occurredAt;
+    private DateTimeImmutable $occurredAt;
 
-    public function __construct(string $id, UserAccountId $aggregateId, int $sequenceNumber, string $name, int $occurredAt) {
+    public function __construct(string $id, UserAccountId $aggregateId, int $sequenceNumber, string $name, DateTimeImmutable $occurredAt) {
         $this->typeName = "user-account-renamed";
         $this->id = $id;
         $this->aggregateId = $aggregateId;
@@ -43,7 +45,7 @@ final class UserAccountRenamed implements UserAccountEvent {
         return $this->name;
     }
 
-    public function getOccurredAt(): int {
+    public function getOccurredAt(): DateTimeImmutable {
         return $this->occurredAt;
     }
 
@@ -58,7 +60,7 @@ final class UserAccountRenamed implements UserAccountEvent {
             "aggregateId" => $this->aggregateId,
             "sequenceNumber" => $this->sequenceNumber,
             "name" => $this->name,
-            "occurredAt" => $this->occurredAt,
+            "occurredAt" => $this->occurredAt->getTimestamp() * 1000,
         ];
     }
 }
