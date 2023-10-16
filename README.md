@@ -1,5 +1,6 @@
 # event-store-adapter-php
 
+[![CI](https://github.com/j5ik2o/event-store-adapter-php/actions/workflows/ci.yml/badge.svg)](https://github.com/j5ik2o/event-store-adapter-js/actions/workflows/ci.yml)
 [![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://renovatebot.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![](https://tokei.rs/b1/github/j5ik2o/event-store-adapter-php)](https://github.com/XAMPPRocky/tokei)
