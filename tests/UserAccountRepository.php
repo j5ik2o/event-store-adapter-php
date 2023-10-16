@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace J5ik2o\EventStoreAdapterPhp\Tests;
 
@@ -8,7 +10,7 @@ final class UserAccountRepository {
     private EventStore $eventStore;
 
     public function __construct(EventStore $eventStore) {
-       $this->eventStore = $eventStore;
+        $this->eventStore = $eventStore;
     }
 
     public function storeEvent(UserAccountEvent $event, int $version): void {

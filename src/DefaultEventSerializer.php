@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace J5ik2o\EventStoreAdapterPhp;
 
@@ -14,6 +16,9 @@ final class DefaultEventSerializer implements EventSerializer {
         return $result;
     }
 
+    /**
+     * @throws SerializationException
+     */
     public function deserialize(string $data): array {
         $result = json_decode($data, true);
         if (!is_array($result)) {
@@ -22,4 +27,3 @@ final class DefaultEventSerializer implements EventSerializer {
         return $result;
     }
 }
-

@@ -1,11 +1,12 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace J5ik2o\EventStoreAdapterPhp\Tests;
 
 use DateTimeImmutable;
 
 final class UserAccountRenamed implements UserAccountEvent {
-
     private readonly string $typeName;
     private readonly string $id;
 

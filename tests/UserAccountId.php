@@ -1,12 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace J5ik2o\EventStoreAdapterPhp\Tests;
 
-use Ulid\Ulid;
 use J5ik2o\EventStoreAdapterPhp\AggregateId;
+use Ulid\Ulid;
 
 final class UserAccountId implements AggregateId {
-
     private readonly string $typeName;
     private readonly string $value;
 
@@ -46,4 +47,3 @@ final class UserAccountId implements AggregateId {
         }
     }
 }
-
