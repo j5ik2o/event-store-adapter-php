@@ -9,4 +9,6 @@ interface Aggregate extends \JsonSerializable {
     public function getVersion(): int;
 
     public function withVersion(int $version): Aggregate;
+
+    public function equals(Aggregate $other): bool;
 }

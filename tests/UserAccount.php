@@ -12,26 +12,34 @@ final class UserAccount implements Aggregate {
     private string $name;
     private int $version;
 
-   public function __construct(UserAccountId $id, int $sequenceNumber, string $name, int $version) {
+    public function __construct(UserAccountId $id, int $sequenceNumber, string $name, int $version) {
         $this->id = $id;
         $this->sequenceNumber = $sequenceNumber;
         $this->name = $name;
         $this->version = $version;
-   }
+    }
+
+    public function equals(Aggregate $other): bool {
+        if ($other instanceof UserAccount) {
+            return $this->id->equals($other->id) && $this->sequenceNumber === $other->sequenceNumber && $this->name === $other->name && $this->version === $other->version;
+        } else {
+            return false;
+        }
+    }
 
     /**
      * @param UserAccountId $id
      * @param string $name
-     * @return array
+     * @return array{0: UserAccount, 1: UserAccountCreated}
      */
-   public static function create(UserAccountId $id, string $name): array {
-       $eventId = uniqid("user-account-event-", true);
-       $now = new DateTimeImmutable('now');
-       $millSec = $now->getTimestamp() * 1000;
-       $aggregate = new UserAccount($id, 1, $name, 1);
-       $event = new UserAccountCreated($eventId, $id, 1, $name, $millSec);
-       return [$aggregate, $event];
-   }
+    public static function create(UserAccountId $id, string $name): array {
+        $eventId = uniqid("user-account-event-", true);
+        $now = new DateTimeImmutable('now');
+        $millSec = $now->getTimestamp() * 1000;
+        $aggregate = new UserAccount($id, 1, $name, 1);
+        $event = new UserAccountCreated($eventId, $id, 1, $name, $millSec);
+        return [$aggregate, $event];
+    }
 
     public function getId(): AggregateId {
         return $this->id;

@@ -9,9 +9,13 @@ final class UserAccountId implements AggregateId {
     private string $typeName;
     private string $value;
 
-    public function __construct(string $value) {
+    public function __construct(?string $value = null) {
         $this->typeName = "user-account";
-        $this->value = $value;
+        if ($value === null) {
+            $this->value = uniqid('', true);
+        } else {
+            $this->value = $value;
+        }
     }
 
     public function getTypeName(): string {
@@ -31,6 +35,14 @@ final class UserAccountId implements AggregateId {
             "typeName" => $this->typeName,
             "value" => $this->value,
         ];
+    }
+
+    public function equals(AggregateId $other): bool {
+        if ($other instanceof UserAccountId) {
+            return $this->value === $other->value;
+        } else {
+            return false;
+        }
     }
 }
 

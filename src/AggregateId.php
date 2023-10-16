@@ -8,4 +8,6 @@ interface AggregateId extends \JsonSerializable {
     public function getValue(): string;
 
     public function asString(): string;
+
+    public function equals(AggregateId $other): bool;
 }

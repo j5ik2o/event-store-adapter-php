@@ -4,6 +4,7 @@ namespace J5ik2o\EventStoreAdapterPhp;
 
 use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Marshaler;
+use Exception;
 
 date_default_timezone_set('UTC');
 
@@ -46,9 +47,9 @@ final class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
                                 int                $shardCount,
                                 callable           $eventConverter,
                                 callable           $snapshotConverter,
-                                bool $keepSnapshot,
-                                int  $keepSnapshotCount,
-                                int  $deleteTtlInMillSec,
+                                bool               $keepSnapshot,
+                                int                $keepSnapshotCount,
+                                int                $deleteTtlInMillSec,
                                 KeyResolver        $keyResolver,
                                 EventSerializer    $eventSerializer,
                                 SnapshotSerializer $snapshotSerializer) {
@@ -212,11 +213,11 @@ final class EventStoreAdapterForDynamoDb implements EventStoreAdapter {
         } else {
             $item = $response['Items'][0];
             $version = $item['version']['N'];
-            $payload = $item['payload']['B'];
+            $payload = $item['payload']['S'];
             $aggregateMap = $this->snapshotSerializer->deserialize($payload);
             $aggregate = ($this->snapshotConverter)($aggregateMap);
             if ($aggregate instanceof Aggregate) {
-                return $aggregate->withVersion($version);
+                return $aggregate->withVersion((int)$version);
             } else {
                 throw new Exception("Aggregate インターフェースを実装していないオブジェクトです。");
             }

@@ -1,22 +1,33 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace J5ik2o\EventStoreAdapterPhp\Tests;
 
 use Aws\Sdk;
-use J5ik2o\EventStoreAdapterPhp\Aggregate;
 use J5ik2o\EventStoreAdapterPhp\DefaultEventSerializer;
-use J5ik2o\EventStoreAdapterPhp\DefaultSnapshotSerializer;
-use J5ik2o\EventStoreAdapterPhp\Event;
-use J5ik2o\EventStoreAdapterPhp\EventStoreAdapterForDynamoDb;
 use J5ik2o\EventStoreAdapterPhp\DefaultKeyResolver;
+use J5ik2o\EventStoreAdapterPhp\DefaultSnapshotSerializer;
+use J5ik2o\EventStoreAdapterPhp\EventStoreAdapterForDynamoDb;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 final class EventStoreAdapterForDynamoDbTest extends TestCase {
-    public function testPersist() {
+    public function setUp(): void {
+        set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+            throw new RuntimeException($errstr . " on line " . $errline . " in file " . $errfile);
+        });
+    }
+
+    public function tearDown(): void {
+        restore_error_handler();
+    }
+
+    public function testPersist(): void {
         $aws = new Sdk([
             'endpoint' => 'http://localhost:8000',
             'region' => 'ap-northeast-1',
-            'version' => 'latest'
+            'version' => 'latest',
         ]);
         $client = $aws->createDynamoDb();
 
@@ -29,7 +40,7 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
         $this->createSnapshotTable($client, $snapshotTableName, $snapshotAidIndexName);
 
         $shardCount = 32;
-        $eventConverter = function(array $eventMap): ?Event {
+        $eventConverter = function ($eventMap) {
             $typeName = $eventMap["typeName"];
             $id = $eventMap["id"];
             $aggregateId = $eventMap["aggregateId"];
@@ -38,15 +49,16 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
             if ($typeName === "user-account-created") {
                 $name = $eventMap["name"];
                 return new UserAccountCreated($id, $aggregateId, $sequenceNumber, $name, $occurredAt);
-            } else if ($typeName === "user-account-named") {
+            } elseif ($typeName === "user-account-named") {
                 $name = $eventMap["name"];
                 return new UserAccountRenamed($id, $aggregateId, $sequenceNumber, $name, $occurredAt);
             } else {
                 return null;
             }
         };
-        $snapshotConverter = function(array $eventMap): ?Aggregate {
-            $id = $eventMap["id"];
+        $snapshotConverter = function ($eventMap) {
+            $idValue = $eventMap["id"]["value"];
+            $id = new UserAccountId($idValue);
             $sequenceNumber = $eventMap["sequenceNumber"];
             $name = $eventMap["name"];
             $version = $eventMap["version"];
@@ -76,9 +88,22 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
             $snapshotSerializer
         );
 
-        $userAccountId = new UserAccountId(uniqid('', true));
-        list($userAccount, $event) = UserAccount::create($userAccountId, "test");
+        $userAccountId = new UserAccountId();
+        [$userAccount, $event] = UserAccount::create($userAccountId, "test");
         $eventStoreAdapter->persistEventAndSnapshot($event, $userAccount);
+
+        $result = $eventStoreAdapter->getLatestSnapshotById($userAccountId);
+        $userAccountResult = null;
+        if ($result instanceof UserAccount) {
+            $userAccountResult = $result;
+        }
+
+        if ($userAccount instanceof UserAccount && $userAccountResult instanceof UserAccount) {
+            $this->assertTrue($userAccount->getId()->equals($userAccountResult->getId()));
+            $this->assertTrue($userAccount->equals($userAccountResult), "object");
+        } else {
+            $this->fail();
+        }
     }
 
     /**
@@ -92,7 +117,7 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
         foreach ($response['TableNames'] as $element) {
             if ($element === $journalTableName) {
                 $client->deleteTable([
-                    'TableName' => $journalTableName
+                    'TableName' => $journalTableName,
                 ]);
             }
         }
@@ -125,7 +150,7 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
                 [
                     'AttributeName' => 'skey',
                     'KeyType' => 'RANGE',
-                ]
+                ],
             ],
             'GlobalSecondaryIndexes' => [
                 [
@@ -138,20 +163,20 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
                         [
                             'AttributeName' => 'seq_nr',
                             'KeyType' => 'RANGE',
-                        ]
+                        ],
                     ],
                     'Projection' => [
-                        'ProjectionType' => 'ALL'
+                        'ProjectionType' => 'ALL',
                     ],
                     'ProvisionedThroughput' => [
                         'ReadCapacityUnits' => 10,
-                        'WriteCapacityUnits' => 10
+                        'WriteCapacityUnits' => 10,
                     ],
-                ]
+                ],
             ],
             'ProvisionedThroughput' => [
                 'ReadCapacityUnits' => 10,
-                'WriteCapacityUnits' => 10
+                'WriteCapacityUnits' => 10,
             ],
         ]);
     }
@@ -167,7 +192,7 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
         foreach ($response['TableNames'] as $element) {
             if ($element === $snapshotTableName) {
                 $client->deleteTable([
-                    'TableName' => $snapshotTableName
+                    'TableName' => $snapshotTableName,
                 ]);
             }
         }
@@ -199,7 +224,7 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
                 [
                     'AttributeName' => 'skey',
                     'KeyType' => 'RANGE',
-                ]
+                ],
             ],
             'GlobalSecondaryIndexes' => [
                 [
@@ -212,16 +237,16 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
                         [
                             'AttributeName' => 'seq_nr',
                             'KeyType' => 'RANGE',
-                        ]
+                        ],
                     ],
                     'Projection' => [
-                        'ProjectionType' => 'ALL'
+                        'ProjectionType' => 'ALL',
                     ],
                     'ProvisionedThroughput' => [
                         'ReadCapacityUnits' => 10,
-                        'WriteCapacityUnits' => 10
+                        'WriteCapacityUnits' => 10,
                     ],
-                ]
+                ],
             ],
             'ProvisionedThroughput' => ['ReadCapacityUnits' => 10, 'WriteCapacityUnits' => 10],
         ]);
