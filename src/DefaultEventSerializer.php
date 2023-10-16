@@ -4,7 +4,7 @@ namespace J5ik2o\EventStoreAdapterPhp;
 
 final class DefaultEventSerializer implements EventSerializer {
     public function serialize(Event $event): string {
-        return json_encode($event);
+        return json_encode($event, JSON_UNESCAPED_UNICODE);
     }
 
     public function deserialize(string $data): array {

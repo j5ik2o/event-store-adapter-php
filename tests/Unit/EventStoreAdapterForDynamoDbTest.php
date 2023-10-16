@@ -76,7 +76,7 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
             $snapshotSerializer
         );
 
-        $userAccountId = new UserAccountId(uniqid("user-account-", true));
+        $userAccountId = new UserAccountId(uniqid('', true));
         list($userAccount, $event) = UserAccount::create($userAccountId, "test");
         $eventStoreAdapter->persistEventAndSnapshot($event, $userAccount);
     }
@@ -88,9 +88,15 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
      * @return void
      */
     public function createJournalTable(\Aws\DynamoDb\DynamoDbClient $client, string $journalTableName, string $journalAidIndexName): void {
-        $client->deleteTable([
-            'TableName' => $journalTableName
-        ]);
+        $response = $client->listTables();
+        foreach ($response['TableNames'] as $element) {
+            if ($element === $journalTableName) {
+                $client->deleteTable([
+                    'TableName' => $journalTableName
+                ]);
+            }
+        }
+
         $client->createTable([
             'TableName' => $journalTableName,
             'AttributeDefinitions' => [
@@ -157,6 +163,14 @@ final class EventStoreAdapterForDynamoDbTest extends TestCase {
      * @return void
      */
     public function createSnapshotTable(\Aws\DynamoDb\DynamoDbClient $client, string $snapshotTableName, string $snapshotAidIndexName): void {
+        $response = $client->listTables();
+        foreach ($response['TableNames'] as $element) {
+            if ($element === $snapshotTableName) {
+                $client->deleteTable([
+                    'TableName' => $snapshotTableName
+                ]);
+            }
+        }
         $client->createTable([
             'TableName' => $snapshotTableName,
             'AttributeDefinitions' => [

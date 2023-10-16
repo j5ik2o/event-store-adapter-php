@@ -25,7 +25,7 @@ final class UserAccount implements Aggregate {
      * @return array
      */
    public static function create(UserAccountId $id, string $name): array {
-       $eventId = uniqid("user-account-id-", true);
+       $eventId = uniqid("user-account-event-", true);
        $now = new DateTimeImmutable('now');
        $millSec = $now->getTimestamp() * 1000;
        $aggregate = new UserAccount($id, 1, $name, 1);
@@ -47,5 +47,14 @@ final class UserAccount implements Aggregate {
 
     public function withVersion(int $version): Aggregate {
         return new UserAccount($this->id, $this->sequenceNumber, $this->name, $version);
+    }
+
+    public function jsonSerialize(): mixed {
+        return [
+            "id" => $this->id,
+            "sequenceNumber" => $this->sequenceNumber,
+            "name" => $this->name,
+            "version" => $this->version,
+        ];
     }
 }

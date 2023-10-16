@@ -50,4 +50,15 @@ final class UserAccountRenamed implements UserAccountEvent {
     public function isCreated(): bool {
         return false;
     }
+
+    public function jsonSerialize(): mixed {
+        return [
+            "typeName" => $this->typeName,
+            "id" => $this->id,
+            "aggregateId" => $this->aggregateId,
+            "sequenceNumber" => $this->sequenceNumber,
+            "name" => $this->name,
+            "occurredAt" => $this->occurredAt,
+        ];
+    }
 }

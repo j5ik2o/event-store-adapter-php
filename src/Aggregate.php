@@ -1,7 +1,7 @@
 <?php declare(strict_types=1);
 
 namespace J5ik2o\EventStoreAdapterPhp;
-interface Aggregate {
+interface Aggregate extends \JsonSerializable {
     public function getId(): AggregateId;
 
     public function getSequenceNumber(): int;

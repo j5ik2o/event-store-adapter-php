@@ -2,7 +2,7 @@
 
 namespace J5ik2o\EventStoreAdapterPhp;
 
-interface AggregateId {
+interface AggregateId extends \JsonSerializable {
     public function getTypeName(): string;
 
     public function getValue(): string;

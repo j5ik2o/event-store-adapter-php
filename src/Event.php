@@ -2,7 +2,7 @@
 
 namespace J5ik2o\EventStoreAdapterPhp;
 
-interface Event {
+interface Event extends \JsonSerializable {
     public function getId(): string;
 
     public function getTypeName(): string;

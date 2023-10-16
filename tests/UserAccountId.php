@@ -25,5 +25,12 @@ final class UserAccountId implements AggregateId {
     public function asString(): string {
         return sprintf("%s-%s", $this->typeName, $this->value);
     }
+
+    public function jsonSerialize(): mixed {
+        return [
+            "typeName" => $this->typeName,
+            "value" => $this->value,
+        ];
+    }
 }
 
