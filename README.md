@@ -14,28 +14,28 @@ You can easily implement an Event Sourcing-enabled repository using EventStore.
 
 ```php
 final class UserAccountRepository {
-    private EventStore $eventStore;
+  private readonly EventStore $eventStore;
 
-    public function __construct(EventStore $eventStore) {
-        $this->eventStore = $eventStore;
-    }
+  public function __construct(EventStore $eventStore) {
+    $this->eventStore = $eventStore;
+  }
 
-    public function storeEvent(UserAccountEvent $event, int $version): void {
-        $this->eventStore->persistEvent($event, $version);
-    }
+  public function storeEvent(UserAccountEvent $event, int $version): void {
+    $this->eventStore->persistEvent($event, $version);
+  }
 
-    public function storeEventAndSnapshot(UserAccountEvent $event, UserAccount $userAccount): void {
-        $this->eventStore->persistEventAndSnapshot($event, $userAccount);
-    }
+  public function storeEventAndSnapshot(UserAccountEvent $event, UserAccount $userAccount): void {
+    $this->eventStore->persistEventAndSnapshot($event, $userAccount);
+  }
 
-    public function findById(UserAccountId $id): ?UserAccount {
-        $latestSnapshot = $this->eventStore->getLatestSnapshotById($id);
-        if ($latestSnapshot === null) {
-            return null;
-        }
-        $events = $this->eventStore->getEventsByIdSinceSequenceNumber($id, $latestSnapshot->getSequenceNumber());
-        return UserAccount::replay($events, $latestSnapshot);
+  public function findById(UserAccountId $id): ?UserAccount {
+    $latestSnapshot = $this->eventStore->getLatestSnapshotById($id);
+    if ($latestSnapshot === null) {
+      return null;
     }
+    $events = $this->eventStore->getEventsByIdSinceSequenceNumber($id, $latestSnapshot->getSequenceNumber());
+    return UserAccount::replay($events, $latestSnapshot);
+  }
 }
 ```
 
