@@ -25,10 +25,13 @@ final class EventStoreForDynamoDb implements EventStore {
      */
     private $snapshotConverter;
 
+    // @phpstan-ignore-next-line
     private readonly bool $keepSnapshot;
 
+    // @phpstan-ignore-next-line
     private readonly int $keepSnapshotCount;
 
+    // @phpstan-ignore-next-line
     private readonly int $deleteTtlInMillSec;
 
     private readonly KeyResolver $keyResolver;
@@ -84,6 +87,15 @@ final class EventStoreForDynamoDb implements EventStore {
         return $this;
     }
 
+    /**
+     * @return array{
+     *   Put: array{
+     *     TableName: string,
+     *     Item: array<string, mixed>,
+     *     ConditionExpression: string
+     *   }
+     * }
+     */
     private function putSnapshot(Event $event, int $seqNr, Aggregate $aggregate): array {
         $pkey = $this->keyResolver->resolvePartitionKey($event->getAggregateId(), $this->shardCount);
         $skey = $this->keyResolver->resolveSortKey($event->getAggregateId(), $seqNr);
@@ -104,7 +116,18 @@ final class EventStoreForDynamoDb implements EventStore {
             ]
         ];
     }
-
+    /**
+     * @return array{
+     *   Update: array{
+     *     TableName: string,
+     *     UpdateExpression: string,
+     *     Key: array<string, mixed>,
+     *     ExpressionAttributeNames: array<string, string>,
+     *     ExpressionAttributeValues: array<string, mixed>,
+     *     ConditionExpression: string
+     *   }
+     * }
+     */
     private function updateSnapshot(Event $event, int $seqNr, int $version, ?Aggregate $aggregate): array {
         $pkey = $this->keyResolver->resolvePartitionKey($event->getAggregateId(), $this->shardCount);
         $skey = $this->keyResolver->resolveSortKey($event->getAggregateId(), $seqNr);
@@ -136,6 +159,15 @@ final class EventStoreForDynamoDb implements EventStore {
         return $update;
     }
 
+    /**
+     * @return array{
+     *   Put: array{
+     *     TableName: string,
+     *     Item: array<string, mixed>,
+     *     ConditionExpression: string
+     *   }
+     * }
+     */
     private function putJournal(Event $event): array {
         $pkey = $this->keyResolver->resolvePartitionKey($event->getAggregateId(), $this->shardCount);
         $skey = $this->keyResolver->resolveSortKey($event->getAggregateId(), $event->getSequenceNumber());
@@ -209,15 +241,19 @@ final class EventStoreForDynamoDb implements EventStore {
         if ($response->count() == 0) {
             return null;
         } else {
-            $item = $response['Items'][0];
-            $version = $item['version']['N'];
-            $payload = $item['payload']['S'];
-            $aggregateMap = $this->snapshotSerializer->deserialize($payload);
-            $aggregate = ($this->snapshotConverter)($aggregateMap);
-            if ($aggregate instanceof Aggregate) {
-                return $aggregate->withVersion((int)$version);
+            if (is_array($response['Items']) && isset($response['Items'][0])) {
+                $item = $response['Items'][0];
+                $version = $item['version']['N'];
+                $payload = $item['payload']['S'];
+                $aggregateMap = $this->snapshotSerializer->deserialize($payload);
+                $aggregate = ($this->snapshotConverter)($aggregateMap);
+                if ($aggregate instanceof Aggregate) {
+                    return $aggregate->withVersion((int)$version);
+                } else {
+                    throw new Exception("Failed to deserialize aggregate");
+                }
             } else {
-                throw new Exception("Aggregate インターフェースを実装していないオブジェクトです。");
+                throw new Exception("Failed to deserialize aggregate");
             }
         }
     }

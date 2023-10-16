@@ -35,7 +35,7 @@
         "test": "phpunit --testdox tests",
         "cs": "php-cs-fixer fix --dry-run",
         "cs:fix": "php-cs-fixer fix",
-        "phpstan": "phpstan analyse"
+        "lint": "phpstan analyse"
     },
     "config": {
         "allow-plugins": {
