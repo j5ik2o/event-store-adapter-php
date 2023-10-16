@@ -38,6 +38,10 @@ class UserAccountRepositoryTest extends TestCase {
             'endpoint' => 'http://localhost:8000',
             'region' => 'ap-northeast-1',
             'version' => 'latest',
+            'credentials' => [
+                'key' => 'x',
+                'secret' => 'x',
+            ]
         ]);
         $client = $aws->createDynamoDb();
 
