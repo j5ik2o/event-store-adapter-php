@@ -1,11 +1,13 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace J5ik2o\EventStoreAdapterPhp\Tests;
 
 use Ulid\Ulid;
 
 final class UserAccountEventFactory {
-    public static function ofCreated(UserAccountId $id, string $name): UserAccountCreated{
+    public static function ofCreated(UserAccountId $id, string $name): UserAccountCreated {
         $eventId = "user-account-event-" . Ulid::generate();
         return new UserAccountCreated($eventId, $id, 1, $name, new \DateTimeImmutable('now'));
     }

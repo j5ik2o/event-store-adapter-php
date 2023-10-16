@@ -10,6 +10,11 @@ return $config
         '@PSR12' => true,
         '@PHP81Migration' => true,
         'no_unused_imports' => true,
+        'braces_position' => [
+            'classes_opening_brace' => 'same_line',
+            'functions_opening_brace' => 'same_line',
+            'anonymous_classes_opening_brace' => 'next_line_unless_newline_at_signature_end'
+        ],
     ])
     ->setFinder(PhpCsFixer\Finder::create()
         ->exclude('vendor')

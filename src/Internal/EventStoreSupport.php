@@ -1,14 +1,20 @@
-<?php declare(strict_types=1);
+<?php
 
-namespace J5ik2o\EventStoreAdapterPhp;
+namespace J5ik2o\EventStoreAdapterPhp\Internal;
 
-use Aws\DynamoDb\DynamoDbClient;
 use Aws\DynamoDb\Marshaler;
-use Exception;
+use J5ik2o\EventStoreAdapterPhp\Aggregate;
+use J5ik2o\EventStoreAdapterPhp\AggregateId;
+use J5ik2o\EventStoreAdapterPhp\DefaultEventSerializer;
+use J5ik2o\EventStoreAdapterPhp\DefaultKeyResolver;
+use J5ik2o\EventStoreAdapterPhp\DefaultSnapshotSerializer;
+use J5ik2o\EventStoreAdapterPhp\Event;
+use J5ik2o\EventStoreAdapterPhp\EventSerializer;
+use J5ik2o\EventStoreAdapterPhp\KeyResolver;
+use J5ik2o\EventStoreAdapterPhp\SerializationException;
+use J5ik2o\EventStoreAdapterPhp\SnapshotSerializer;
 
-final class EventStoreForDynamoDb implements EventStore {
-    private readonly DynamoDbClient $client;
-
+final class EventStoreSupport {
     private readonly string $journalTableName;
 
     private readonly string $snapshotTableName;
@@ -39,22 +45,21 @@ final class EventStoreForDynamoDb implements EventStore {
     private readonly SnapshotSerializer $snapshotSerializer;
     private readonly Marshaler $marshaler;
 
-
-    public function __construct(DynamoDbClient     $client,
-                                string             $journalTableName,
-                                string             $snapshotTableName,
-                                string             $journalAidIndexName,
-                                string             $snapshotAidIndexName,
-                                int                $shardCount,
-                                callable           $eventConverter,
-                                callable           $snapshotConverter,
-                                bool               $keepSnapshot,
-                                int                $keepSnapshotCount,
-                                int                $deleteTtlInMillSec,
-                                KeyResolver        $keyResolver,
-                                EventSerializer    $eventSerializer,
-                                SnapshotSerializer $snapshotSerializer) {
-        $this->client = $client;
+    public function __construct(
+        string              $journalTableName,
+        string              $snapshotTableName,
+        string              $journalAidIndexName,
+        string              $snapshotAidIndexName,
+        int                 $shardCount,
+        callable            $eventConverter,
+        callable            $snapshotConverter,
+        ?bool               $keepSnapshot = null,
+        ?int                $keepSnapshotCount = null,
+        ?int                $deleteTtlInMillSec = null,
+        ?KeyResolver        $keyResolver = null,
+        ?EventSerializer    $eventSerializer = null,
+        ?SnapshotSerializer $snapshotSerializer = null
+    ) {
         $this->marshaler = new Marshaler();
         $this->journalTableName = $journalTableName;
         $this->snapshotTableName = $snapshotTableName;
@@ -63,28 +68,36 @@ final class EventStoreForDynamoDb implements EventStore {
         $this->shardCount = $shardCount;
         $this->eventConverter = $eventConverter;
         $this->snapshotConverter = $snapshotConverter;
-        $this->keepSnapshot = $keepSnapshot;
-        $this->deleteTtlInMillSec = $deleteTtlInMillSec;
-        $this->keepSnapshotCount = $keepSnapshotCount;
-        $this->keyResolver = $keyResolver;
-        $this->eventSerializer = $eventSerializer;
-        $this->snapshotSerializer = $snapshotSerializer;
-    }
-
-    public function withKeepSnapshot(bool $keepSnapshot): EventStore {
-        return $this;
-    }
-
-    public function withDeleteTtl(int $deleteTtlInMillSec): EventStore {
-        return $this;
-    }
-
-    public function withKeepSnapshotCount(int $keepSnapshotCount): EventStore {
-        return $this;
-    }
-
-    public function withKeyResolver(KeyResolver $keyResolver): EventStore {
-        return $this;
+        if ($keepSnapshot === null) {
+            $this->keepSnapshot = false;
+        } else {
+            $this->keepSnapshot = $keepSnapshot;
+        }
+        if ($keepSnapshotCount === null) {
+            $this->keepSnapshotCount = 0;
+        } else {
+            $this->keepSnapshotCount = $keepSnapshotCount;
+        }
+        if ($deleteTtlInMillSec === null) {
+            $this->deleteTtlInMillSec = 1000;
+        } else {
+            $this->deleteTtlInMillSec = $deleteTtlInMillSec;
+        }
+        if ($keyResolver === null) {
+            $this->keyResolver = new DefaultKeyResolver();
+        } else {
+            $this->keyResolver = $keyResolver;
+        }
+        if ($eventSerializer === null) {
+            $this->eventSerializer = new DefaultEventSerializer();
+        } else {
+            $this->eventSerializer = $eventSerializer;
+        }
+        if ($snapshotSerializer === null) {
+            $this->snapshotSerializer = new DefaultSnapshotSerializer();
+        } else {
+            $this->snapshotSerializer = $snapshotSerializer;
+        }
     }
 
     /**
@@ -96,7 +109,7 @@ final class EventStoreForDynamoDb implements EventStore {
      *   }
      * }
      */
-    private function putSnapshot(Event $event, int $seqNr, Aggregate $aggregate): array {
+    public function putSnapshot(Event $event, int $seqNr, Aggregate $aggregate): array {
         $pkey = $this->keyResolver->resolvePartitionKey($event->getAggregateId(), $this->shardCount);
         $skey = $this->keyResolver->resolveSortKey($event->getAggregateId(), $seqNr);
         $payload = $this->snapshotSerializer->serialize($aggregate);
@@ -112,10 +125,12 @@ final class EventStoreForDynamoDb implements EventStore {
                     'version' => 1,
                     'ttl' => 0,
                 ]),
-                'ConditionExpression' => 'attribute_not_exists(pkey) AND attribute_not_exists(skey)'
-            ]
+                'ConditionExpression' => 'attribute_not_exists(pkey) AND attribute_not_exists(skey)',
+            ],
         ];
     }
+
+
     /**
      * @return array{
      *   Update: array{
@@ -128,7 +143,7 @@ final class EventStoreForDynamoDb implements EventStore {
      *   }
      * }
      */
-    private function updateSnapshot(Event $event, int $seqNr, int $version, ?Aggregate $aggregate): array {
+    public function updateSnapshot(Event $event, int $seqNr, int $version, ?Aggregate $aggregate): array {
         $pkey = $this->keyResolver->resolvePartitionKey($event->getAggregateId(), $this->shardCount);
         $skey = $this->keyResolver->resolveSortKey($event->getAggregateId(), $seqNr);
         $update = [
@@ -140,14 +155,14 @@ final class EventStoreForDynamoDb implements EventStore {
                     'skey' => $skey,
                 ]),
                 'ExpressionAttributeNames' => [
-                    '#version' => 'version'
+                    '#version' => 'version',
                 ],
                 'ExpressionAttributeValues' => [
                     ':before_version' => $this->marshaler->marshalValue($version),
                     ':after_version' => $this->marshaler->marshalValue($version + 1),
                 ],
-                'ConditionExpression' => "#version=:before_version"
-            ]
+                'ConditionExpression' => "#version=:before_version",
+            ],
         ];
         if ($aggregate !== null) {
             $payload = $this->snapshotSerializer->serialize($aggregate);
@@ -159,7 +174,9 @@ final class EventStoreForDynamoDb implements EventStore {
         return $update;
     }
 
+
     /**
+     * @param Event $event
      * @return array{
      *   Put: array{
      *     TableName: string,
@@ -168,7 +185,7 @@ final class EventStoreForDynamoDb implements EventStore {
      *   }
      * }
      */
-    private function putJournal(Event $event): array {
+    public function putJournal(Event $event): array {
         $pkey = $this->keyResolver->resolvePartitionKey($event->getAggregateId(), $this->shardCount);
         $skey = $this->keyResolver->resolveSortKey($event->getAggregateId(), $event->getSequenceNumber());
         $payload = $this->eventSerializer->serialize($event);
@@ -183,106 +200,80 @@ final class EventStoreForDynamoDb implements EventStore {
                     'payload' => $payload,
                     'occurred_at' => $event->getOccurredAt()->getTimestamp() * 1000,
                 ]),
-                'ConditionExpression' => 'attribute_not_exists(pkey) AND attribute_not_exists(skey)'
-            ]
+                'ConditionExpression' => 'attribute_not_exists(pkey) AND attribute_not_exists(skey)',
+            ],
         ];
     }
 
-    private function createEventAndSnapshot(Event $event, Aggregate $aggregate): void {
-        $putJournal = $this->putJournal($event);
-        $putSnapshot = $this->putSnapshot($event, 0, $aggregate);
-        $transactItems = ['TransactItems' => [$putJournal, $putSnapshot]];
-        // TODO: keepSnapshot
-        $this->client->transactWriteItems($transactItems);
-    }
-
-    private function updateEventAndSnapshotOpt(Event $event, int $version, ?Aggregate $aggregate): void {
-        $putJournal = $this->putJournal($event);
-        $updateSnapshot = $this->updateSnapshot($event, 0, $version, $aggregate);
-        $transactItems = ['TransactItems' => [$putJournal, $updateSnapshot]];
-        $this->client->transactWriteItems($transactItems);
-    }
-
-
-    public function persistEvent(Event $event, int $version): void {
-        if ($event->isCreated()) throw new IllegalArgumentException('event is created type');
-        $this->updateEventAndSnapshotOpt($event, $version, null);
-        // TODO: tryPurgeExcessSnapshots
-    }
-
-    public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): void {
-        if ($event->isCreated()) {
-            $this->createEventAndSnapshot($event, $aggregate);
-        } else {
-            $this->updateEventAndSnapshotOpt($event, $aggregate->getVersion(), $aggregate);
-            // TODO: tryPurgeExcessSnapshots
-        }
-    }
-
     /**
-     * @throws Exception
+     * @param AggregateId $aggregateId
+     * @return array{
+     *  TableName: string,
+     *  IndexName: string,
+     *  KeyConditionExpression: string,
+     *  ExpressionAttributeNames: array<string, string>,
+     *  ExpressionAttributeValues: array<string, mixed>,
+     *  Limit: int
+     * }
      */
-    public function getLatestSnapshotById(AggregateId $aggregateId): ?Aggregate {
-        $request = [
+    public function getLatestSnapshotById(AggregateId $aggregateId): array {
+        return [
             'TableName' => $this->snapshotTableName,
             'IndexName' => $this->snapshotAidIndexName,
             'KeyConditionExpression' => '#aid = :aid AND #seq_nr = :seq_nr',
             'ExpressionAttributeNames' => [
                 '#aid' => 'aid',
-                '#seq_nr' => 'seq_nr'
+                '#seq_nr' => 'seq_nr',
             ],
             'ExpressionAttributeValues' => $this->marshaler->marshalItem([
                 ':aid' => $aggregateId->asString(),
-                ':seq_nr' => 0
+                ':seq_nr' => 0,
             ]),
             'Limit' => 1,
         ];
-        $response = $this->client->query($request);
-        if ($response->count() == 0) {
-            return null;
-        } else {
-            if (is_array($response['Items']) && isset($response['Items'][0])) {
-                $item = $response['Items'][0];
-                $version = $item['version']['N'];
-                $payload = $item['payload']['S'];
-                $aggregateMap = $this->snapshotSerializer->deserialize($payload);
-                $aggregate = ($this->snapshotConverter)($aggregateMap);
-                if ($aggregate instanceof Aggregate) {
-                    return $aggregate->withVersion((int)$version);
-                } else {
-                    throw new Exception("Failed to deserialize aggregate");
-                }
-            } else {
-                throw new Exception("Failed to deserialize aggregate");
-            }
-        }
     }
 
+    /**
+     * @param AggregateId $aggregateId
+     * @param int $sequenceNumber
+     * @return array{
+     *  TableName: string,
+     *  IndexName: string,
+     *  KeyConditionExpression: string,
+     *  ExpressionAttributeNames: array<string, string>,
+     *  ExpressionAttributeValues: array<string, mixed>,
+     * }
+     */
     public function getEventsByIdSinceSequenceNumber(AggregateId $aggregateId, int $sequenceNumber): array {
-        $request = [
+        return [
             'TableName' => $this->journalTableName,
             'IndexName' => $this->journalAidIndexName,
             'KeyConditionExpression' => '#aid = :aid AND #seq_nr >= :seq_nr',
             'ExpressionAttributeNames' => [
                 '#aid' => 'aid',
-                '#seq_nr' => 'seq_nr'
+                '#seq_nr' => 'seq_nr',
             ],
             'ExpressionAttributeValues' => $this->marshaler->marshalItem([
                 ':aid' => $aggregateId->asString(),
-                ':seq_nr' => $sequenceNumber
+                ':seq_nr' => $sequenceNumber,
             ]),
         ];
-        $response = $this->client->query($request);
-        $result = [];
-        if (is_iterable($response['Items'])) {
-            foreach ($response['Items'] as $item) {
-                $payload = $item["payload"]["S"];
-                $payloadMap = $this->eventSerializer->deserialize($payload);
-                $event = ($this->eventConverter)($payloadMap);
-                $result[] = $event;
-            }
-        }
-        return $result;
     }
-}
 
+    /**
+     * @throws SerializationException
+     */
+    public function convertToEvent(string $payload): Event {
+        $payloadMap = $this->eventSerializer->deserialize($payload);
+        return ($this->eventConverter)($payloadMap);
+    }
+
+    /**
+     * @throws SerializationException
+     */
+    public function convertToSnapshot(string $payload): Aggregate {
+        $payloadMap = $this->snapshotSerializer->deserialize($payload);
+        return ($this->snapshotConverter)($payloadMap);
+    }
+
+}

@@ -1,4 +1,6 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace J5ik2o\EventStoreAdapterPhp\Tests;
 
@@ -6,7 +8,7 @@ use Aws\Sdk;
 use J5ik2o\EventStoreAdapterPhp\DefaultEventSerializer;
 use J5ik2o\EventStoreAdapterPhp\DefaultKeyResolver;
 use J5ik2o\EventStoreAdapterPhp\DefaultSnapshotSerializer;
-use J5ik2o\EventStoreAdapterPhp\EventStoreForDynamoDb;
+use J5ik2o\EventStoreAdapterPhp\Internal\EventStoreForDynamoDb;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -32,7 +34,7 @@ final class EventStoreForDynamoDbTest extends TestCase {
             'credentials' => [
                 'key' => 'x',
                 'secret' => 'x',
-            ]
+            ],
         ]);
         $client = $aws->createDynamoDb();
 

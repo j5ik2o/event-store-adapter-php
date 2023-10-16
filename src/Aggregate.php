@@ -1,6 +1,9 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace J5ik2o\EventStoreAdapterPhp;
+
 interface Aggregate extends \JsonSerializable {
     public function getId(): AggregateId;
 

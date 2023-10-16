@@ -6,7 +6,7 @@ use Aws\Sdk;
 use J5ik2o\EventStoreAdapterPhp\DefaultEventSerializer;
 use J5ik2o\EventStoreAdapterPhp\DefaultKeyResolver;
 use J5ik2o\EventStoreAdapterPhp\DefaultSnapshotSerializer;
-use J5ik2o\EventStoreAdapterPhp\EventStoreForDynamoDb;
+use J5ik2o\EventStoreAdapterPhp\Internal\EventStoreForDynamoDb;
 use J5ik2o\EventStoreAdapterPhp\Tests\AlreadyRenamedException;
 use J5ik2o\EventStoreAdapterPhp\Tests\DynamoDbUtils;
 use J5ik2o\EventStoreAdapterPhp\Tests\ReplayException;
@@ -41,7 +41,7 @@ class UserAccountRepositoryTest extends TestCase {
             'credentials' => [
                 'key' => 'x',
                 'secret' => 'x',
-            ]
+            ],
         ]);
         $client = $aws->createDynamoDb();
 

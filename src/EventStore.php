@@ -1,17 +1,10 @@
-<?php declare(strict_types=1);
+<?php
+
+declare(strict_types=1);
 
 namespace J5ik2o\EventStoreAdapterPhp;
 
-interface EventStore {
-
-    public function withKeepSnapshot(bool $keepSnapshot): EventStore;
-
-    public function withDeleteTtl(int $deleteTtlInMillSec): EventStore;
-
-    public function withKeepSnapshotCount(int $keepSnapshotCount): EventStore;
-
-    public function withKeyResolver(KeyResolver $keyResolver): EventStore;
-
+interface EventStore extends EventStoreOptions {
     public function persistEvent(Event $event, int $version): void;
 
     public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): void;
