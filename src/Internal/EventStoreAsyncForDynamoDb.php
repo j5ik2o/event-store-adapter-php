@@ -3,7 +3,6 @@
 namespace J5ik2o\EventStoreAdapterPhp\Internal;
 
 use Aws\DynamoDb\DynamoDbClient;
-use Exception;
 use GuzzleHttp\Promise\PromiseInterface;
 use J5ik2o\EventStoreAdapterPhp\Aggregate;
 use J5ik2o\EventStoreAdapterPhp\AggregateId;
@@ -15,6 +14,7 @@ use J5ik2o\EventStoreAdapterPhp\EventSerializer;
 use J5ik2o\EventStoreAdapterPhp\EventStoreAsync;
 use J5ik2o\EventStoreAdapterPhp\IllegalArgumentException;
 use J5ik2o\EventStoreAdapterPhp\KeyResolver;
+use J5ik2o\EventStoreAdapterPhp\SerializationException;
 use J5ik2o\EventStoreAdapterPhp\SnapshotSerializer;
 
 final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
@@ -235,16 +235,22 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
         );
     }
 
+    /**
+     * @throws SerializationException
+     */
     private function createEventAndSnapshot(Event $event, Aggregate $aggregate): PromiseInterface {
-        $putJournal = $this->eventStoreSupport->putJournal($event);
+        $putJournal = $this->eventStoreSupport->generatePutJournalRequest($event);
         $putSnapshot = $this->eventStoreSupport->putSnapshot($event, 0, $aggregate);
         $transactItems = ['TransactItems' => [$putJournal, $putSnapshot]];
         // TODO: keepSnapshot
         return $this->client->transactWriteItemsAsync($transactItems);
     }
 
+    /**
+     * @throws SerializationException
+     */
     private function updateEventAndSnapshotOpt(Event $event, int $version, ?Aggregate $aggregate): PromiseInterface {
-        $putJournal = $this->eventStoreSupport->putJournal($event);
+        $putJournal = $this->eventStoreSupport->generatePutJournalRequest($event);
         $updateSnapshot = $this->eventStoreSupport->updateSnapshot($event, 0, $version, $aggregate);
         $transactItems = ['TransactItems' => [$putJournal, $updateSnapshot]];
         return $this->client->transactWriteItemsAsync($transactItems);
@@ -252,6 +258,7 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
 
     /**
      * @throws IllegalArgumentException
+     * @throws SerializationException
      */
     public function persistEvent(Event $event, int $version): PromiseInterface {
         if ($event->isCreated()) {
@@ -260,6 +267,9 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
         return $this->updateEventAndSnapshotOpt($event, $version, null);
     }
 
+    /**
+     * @throws SerializationException
+     */
     public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): PromiseInterface {
         if ($event->isCreated()) {
             return $this->createEventAndSnapshot($event, $aggregate);
@@ -269,39 +279,18 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
     }
 
     public function getLatestSnapshotById(AggregateId $aggregateId): PromiseInterface {
-        $request = $this->eventStoreSupport->getLatestSnapshotById($aggregateId);
+        $request = $this->eventStoreSupport->generateGetSnapshot($aggregateId);
         $response = $this->client->queryAsync($request);
         return $response->then(function ($response) {
-            if ($response->count() == 0) {
-                return null;
-            } else {
-                if (is_array($response['Items']) && isset($response['Items'][0])) {
-                    $item = $response['Items'][0];
-                    $version = $item['version']['N'];
-                    $payload = $item['payload']['S'];
-                    $aggregate = $this->eventStoreSupport->convertToSnapshot($payload);
-                    if ($aggregate instanceof Aggregate) {
-                        return $aggregate->withVersion((int)$version);
-                    }
-                }
-                throw new Exception("Failed to deserialize aggregate");
-            }
+            return $this->eventStoreSupport->convertFromResponseToSnapshot($response);
         });
     }
 
     public function getEventsByIdSinceSequenceNumber(AggregateId $aggregateId, int $sequenceNumber): PromiseInterface {
-        $request = $this->eventStoreSupport->getEventsByIdSinceSequenceNumber($aggregateId, $sequenceNumber);
+        $request = $this->eventStoreSupport->generateGetEventsRequest($aggregateId, $sequenceNumber);
         $response = $this->client->queryAsync($request);
         return $response->then(function ($response) {
-            $result = [];
-            if (is_iterable($response['Items'])) {
-                foreach ($response['Items'] as $item) {
-                    $payload = $item["payload"]["S"];
-                    $event = $this->eventStoreSupport->convertToEvent($payload);
-                    $result[] = $event;
-                }
-            }
-            return $result;
+            return $this->eventStoreSupport->convertFromResponseToEvents($response);
         });
     }
 

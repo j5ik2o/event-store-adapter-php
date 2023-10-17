@@ -16,6 +16,7 @@ use J5ik2o\EventStoreAdapterPhp\EventSerializer;
 use J5ik2o\EventStoreAdapterPhp\EventStore;
 use J5ik2o\EventStoreAdapterPhp\IllegalArgumentException;
 use J5ik2o\EventStoreAdapterPhp\KeyResolver;
+use J5ik2o\EventStoreAdapterPhp\SerializationException;
 use J5ik2o\EventStoreAdapterPhp\SnapshotSerializer;
 
 final class EventStoreForDynamoDb implements EventStore {
@@ -236,22 +237,32 @@ final class EventStoreForDynamoDb implements EventStore {
         );
     }
 
+    /**
+     * @throws SerializationException
+     */
     private function createEventAndSnapshot(Event $event, Aggregate $aggregate): void {
-        $putJournal = $this->eventStoreSupport->putJournal($event);
+        $putJournal = $this->eventStoreSupport->generatePutJournalRequest($event);
         $putSnapshot = $this->eventStoreSupport->putSnapshot($event, 0, $aggregate);
         $transactItems = ['TransactItems' => [$putJournal, $putSnapshot]];
         // TODO: keepSnapshot
         $this->client->transactWriteItems($transactItems);
     }
 
+    /**
+     * @throws SerializationException
+     */
     private function updateEventAndSnapshotOpt(Event $event, int $version, ?Aggregate $aggregate): void {
-        $putJournal = $this->eventStoreSupport->putJournal($event);
+        $putJournal = $this->eventStoreSupport->generatePutJournalRequest($event);
         $updateSnapshot = $this->eventStoreSupport->updateSnapshot($event, 0, $version, $aggregate);
         $transactItems = ['TransactItems' => [$putJournal, $updateSnapshot]];
         $this->client->transactWriteItems($transactItems);
     }
 
 
+    /**
+     * @throws SerializationException
+     * @throws IllegalArgumentException
+     */
     public function persistEvent(Event $event, int $version): void {
         if ($event->isCreated()) {
             throw new IllegalArgumentException('event is created type');
@@ -260,6 +271,9 @@ final class EventStoreForDynamoDb implements EventStore {
         // TODO: tryPurgeExcessSnapshots
     }
 
+    /**
+     * @throws SerializationException
+     */
     public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): void {
         if ($event->isCreated()) {
             $this->createEventAndSnapshot($event, $aggregate);
@@ -273,36 +287,18 @@ final class EventStoreForDynamoDb implements EventStore {
      * @throws Exception
      */
     public function getLatestSnapshotById(AggregateId $aggregateId): ?Aggregate {
-        $request = $this->eventStoreSupport->getLatestSnapshotById($aggregateId);
+        $request = $this->eventStoreSupport->generateGetSnapshot($aggregateId);
         $response = $this->client->query($request);
-        if ($response->count() == 0) {
-            return null;
-        } else {
-            if (is_array($response['Items']) && isset($response['Items'][0])) {
-                $item = $response['Items'][0];
-                $version = $item['version']['N'];
-                $payload = $item['payload']['S'];
-                $aggregate = $this->eventStoreSupport->convertToSnapshot($payload);
-                if ($aggregate instanceof Aggregate) {
-                    return $aggregate->withVersion((int)$version);
-                }
-            }
-            throw new Exception("Failed to deserialize aggregate");
-        }
+        return $this->eventStoreSupport->convertFromResponseToSnapshot($response);
     }
 
+    /**
+     * @throws SerializationException
+     */
     public function getEventsByIdSinceSequenceNumber(AggregateId $aggregateId, int $sequenceNumber): array {
-        $request = $this->eventStoreSupport->getEventsByIdSinceSequenceNumber($aggregateId, $sequenceNumber);
+        $request = $this->eventStoreSupport->generateGetEventsRequest($aggregateId, $sequenceNumber);
         $response = $this->client->query($request);
-        $result = [];
-        if (is_iterable($response['Items'])) {
-            foreach ($response['Items'] as $item) {
-                $payload = $item["payload"]["S"];
-                $event = $this->eventStoreSupport->convertToEvent($payload);
-                $result[] = $event;
-            }
-        }
-        return $result;
+        return $this->eventStoreSupport->convertFromResponseToEvents($response);
     }
 
 
