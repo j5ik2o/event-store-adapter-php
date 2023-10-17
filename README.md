@@ -73,7 +73,7 @@ $userAccountRepository->storeEvent($renamed, $userAccount3->getVersion());
 
 ## Table Specifications
 
-TODO
+See [docs/DATABASE_SCHEMA.md](docs/DATABASE_SCHEMA.md).
 
 ## CQRS/Event Sourcing Example
 
