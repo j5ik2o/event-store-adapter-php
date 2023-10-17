@@ -9,6 +9,12 @@ This library is designed to turn DynamoDB into an Event Store for CQRS/Event Sou
 
 The Status is WIP.
 
+## Installation
+
+```shell
+composer require j5ik2o/event-store-adapter-php
+```
+
 ## Usage
 
 You can easily implement an Event Sourcing-enabled repository using EventStore.
