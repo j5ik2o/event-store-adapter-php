@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![](https://tokei.rs/b1/github/j5ik2o/event-store-adapter-php)](https://github.com/XAMPPRocky/tokei)
 
-This library is designed to turn DynamoDB into an Event Store for Event Sourcing.
+This library is designed to turn DynamoDB into an Event Store for CQRS/Event Sourcing.
 
 The Status is WIP.
 
