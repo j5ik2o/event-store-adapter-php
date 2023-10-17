@@ -6,9 +6,21 @@ namespace J5ik2o\EventStoreAdapterPhp;
 
 use GuzzleHttp\Promise\PromiseInterface;
 
-interface EventStoreAsync extends EventStoreOptions {
+interface EventStoreAsync {
+    public function withKeepSnapshot(bool $keepSnapshot): EventStoreAsync;
+
+    public function withDeleteTtl(int $deleteTtlInMillSec): EventStoreAsync;
+
+    public function withKeepSnapshotCount(int $keepSnapshotCount): EventStoreAsync;
+
+    public function withKeyResolver(KeyResolver $keyResolver): EventStoreAsync;
+
+    public function withEventSerializer(EventSerializer $eventSerializer): EventStoreAsync;
+
+    public function withSnapshotSerializer(SnapshotSerializer $snapshotSerializer): EventStoreAsync;
+
     /**
-     * Persist an event to the event store.
+     * Persists an event only.
      *
      * @param Event $event
      * @param int $version
@@ -17,7 +29,7 @@ interface EventStoreAsync extends EventStoreOptions {
     public function persistEvent(Event $event, int $version): PromiseInterface;
 
     /**
-     * Persist an event to the event store and create a snapshot.
+     * Persists an event and a snapshot.
      *
      * @param Event $event
      * @param Aggregate $aggregate
@@ -26,7 +38,7 @@ interface EventStoreAsync extends EventStoreOptions {
     public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): PromiseInterface;
 
     /**
-     * Gets the latest snapshot for an aggregate.
+     * Gets the latest snapshot by the aggregate id.
      *
      * @param AggregateId $aggregateId
      * @return PromiseInterface
@@ -34,7 +46,7 @@ interface EventStoreAsync extends EventStoreOptions {
     public function getLatestSnapshotById(AggregateId $aggregateId): PromiseInterface;
 
     /**
-     * Gets all events for an aggregate.
+     * Gets the events by the aggregate id and since the sequence number.
      *
      * @param AggregateId $aggregateId
      * @param int $sequenceNumber

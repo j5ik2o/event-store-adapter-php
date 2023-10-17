@@ -5,10 +5,7 @@ declare(strict_types=1);
 namespace J5ik2o\EventStoreAdapterPhp\Tests;
 
 use Aws\Sdk;
-use J5ik2o\EventStoreAdapterPhp\DefaultEventSerializer;
-use J5ik2o\EventStoreAdapterPhp\DefaultKeyResolver;
-use J5ik2o\EventStoreAdapterPhp\DefaultSnapshotSerializer;
-use J5ik2o\EventStoreAdapterPhp\Internal\EventStoreForDynamoDb;
+use J5ik2o\EventStoreAdapterPhp\EventStoreFactory;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -73,14 +70,8 @@ final class EventStoreForDynamoDbTest extends TestCase {
             $version = $snapshotMap["version"];
             return new UserAccount($id, $sequenceNumber, $name, $version);
         };
-        $keepSnapshot = true;
-        $keepSnapshotCount = 5;
-        $deleteTtlInMillSec = 1000;
-        $keyResolver = new DefaultKeyResolver();
-        $eventSerializer = new DefaultEventSerializer();
-        $snapshotSerializer = new DefaultSnapshotSerializer();
 
-        $eventStore = new EventStoreForDynamoDb(
+        $eventStore = EventStoreFactory::create(
             $client,
             $journalTableName,
             $snapshotTableName,
@@ -89,13 +80,9 @@ final class EventStoreForDynamoDbTest extends TestCase {
             $shardCount,
             $eventConverter,
             $snapshotConverter,
-            $keepSnapshot,
-            $keepSnapshotCount,
-            $deleteTtlInMillSec,
-            $keyResolver,
-            $eventSerializer,
-            $snapshotSerializer
         );
+
+        $eventStore->withKeepSnapshot(true);
 
         $userAccountId = new UserAccountId();
         [$userAccount, $event] = UserAccount::create($userAccountId, "test");
