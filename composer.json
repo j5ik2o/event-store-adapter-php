@@ -1,6 +1,6 @@
 {
   "name": "j5ik2o/event-store-adapter-php",
-  "description": "This library is designed to turn DynamoDB into an Event Store for Event Sourcing.",
+  "description": "This library is designed to turn DynamoDB into an Event Store for CQRS/Event Sourcing.",
   "license": "MIT",
   "type": "library",
   "authors": [
