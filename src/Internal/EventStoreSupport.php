@@ -3,6 +3,7 @@
 namespace J5ik2o\EventStoreAdapterPhp\Internal;
 
 use Aws\DynamoDb\Marshaler;
+use Aws\Result;
 use J5ik2o\EventStoreAdapterPhp\Aggregate;
 use J5ik2o\EventStoreAdapterPhp\AggregateId;
 use J5ik2o\EventStoreAdapterPhp\DefaultEventSerializer;
@@ -101,6 +102,11 @@ final class EventStoreSupport {
     }
 
     /**
+     * Generates a request to put a snapshot.
+     *
+     * @param Event $event
+     * @param int $seqNr
+     * @param Aggregate $aggregate
      * @return array{
      *   Put: array{
      *     TableName: string,
@@ -108,6 +114,7 @@ final class EventStoreSupport {
      *     ConditionExpression: string
      *   }
      * }
+     * @throws SerializationException
      */
     public function putSnapshot(Event $event, int $seqNr, Aggregate $aggregate): array {
         $pkey = $this->keyResolver->resolvePartitionKey($event->getAggregateId(), $this->shardCount);
@@ -132,6 +139,12 @@ final class EventStoreSupport {
 
 
     /**
+     * Generates a request to update a snapshot.
+     *
+     * @param Event $event
+     * @param int $seqNr
+     * @param int $version
+     * @param Aggregate|null $aggregate
      * @return array{
      *   Update: array{
      *     TableName: string,
@@ -142,6 +155,7 @@ final class EventStoreSupport {
      *     ConditionExpression: string
      *   }
      * }
+     * @throws SerializationException
      */
     public function updateSnapshot(Event $event, int $seqNr, int $version, ?Aggregate $aggregate): array {
         $pkey = $this->keyResolver->resolvePartitionKey($event->getAggregateId(), $this->shardCount);
@@ -176,6 +190,8 @@ final class EventStoreSupport {
 
 
     /**
+     * Generates a request to append a journal.
+     *
      * @param Event $event
      * @return array{
      *   Put: array{
@@ -184,8 +200,9 @@ final class EventStoreSupport {
      *     ConditionExpression: string
      *   }
      * }
+     * @throws SerializationException
      */
-    public function putJournal(Event $event): array {
+    public function generatePutJournalRequest(Event $event): array {
         $pkey = $this->keyResolver->resolvePartitionKey($event->getAggregateId(), $this->shardCount);
         $skey = $this->keyResolver->resolveSortKey($event->getAggregateId(), $event->getSequenceNumber());
         $payload = $this->eventSerializer->serialize($event);
@@ -206,6 +223,8 @@ final class EventStoreSupport {
     }
 
     /**
+     * Generates a request to get a snapshot.
+     *
      * @param AggregateId $aggregateId
      * @return array{
      *  TableName: string,
@@ -216,7 +235,7 @@ final class EventStoreSupport {
      *  Limit: int
      * }
      */
-    public function getLatestSnapshotById(AggregateId $aggregateId): array {
+    public function generateGetSnapshot(AggregateId $aggregateId): array {
         return [
             'TableName' => $this->snapshotTableName,
             'IndexName' => $this->snapshotAidIndexName,
@@ -234,6 +253,8 @@ final class EventStoreSupport {
     }
 
     /**
+     * Generates a request to get events.
+     *
      * @param AggregateId $aggregateId
      * @param int $sequenceNumber
      * @return array{
@@ -244,7 +265,7 @@ final class EventStoreSupport {
      *  ExpressionAttributeValues: array<string, mixed>,
      * }
      */
-    public function getEventsByIdSinceSequenceNumber(AggregateId $aggregateId, int $sequenceNumber): array {
+    public function generateGetEventsRequest(AggregateId $aggregateId, int $sequenceNumber): array {
         return [
             'TableName' => $this->journalTableName,
             'IndexName' => $this->journalAidIndexName,
@@ -261,19 +282,69 @@ final class EventStoreSupport {
     }
 
     /**
+     * Converts an event from a payload.
+     *
+     * @param string $payload
+     * @return Event
      * @throws SerializationException
      */
-    public function convertToEvent(string $payload): Event {
+    public function convertFromPayloadToEvent(string $payload): Event {
         $payloadMap = $this->eventSerializer->deserialize($payload);
         return ($this->eventConverter)($payloadMap);
     }
 
     /**
+     * Converts a snapshot from a payload.
+     *
+     * @param string $payload
+     * @return Aggregate
      * @throws SerializationException
      */
     public function convertToSnapshot(string $payload): Aggregate {
         $payloadMap = $this->snapshotSerializer->deserialize($payload);
         return ($this->snapshotConverter)($payloadMap);
+    }
+
+
+    /**
+     * @param Result $response
+     * @return array<Event>
+     * @throws SerializationException
+     */
+    // @phpstan-ignore-next-line
+    public function convertFromResponseToEvents(Result $response): array {
+        $result = [];
+        $items = $response->get('Items') ?? [];
+        if (is_iterable($items)) {
+            foreach ($items as $item) {
+                $payload = $item['payload']['S'];
+                $result[] = $this->convertFromPayloadToEvent($payload);
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * @param Result $response
+     * @return Aggregate|null
+     * @throws SerializationException
+     */
+    // @phpstan-ignore-next-line
+    public function convertFromResponseToSnapshot(Result $response): ?Aggregate {
+        if ($response->count() == 0) {
+            return null;
+        } else {
+            if (is_array($response['Items']) && isset($response['Items'][0])) {
+                $item = $response['Items'][0];
+                $version = $item['version']['N'];
+                $payload = $item['payload']['S'];
+                $aggregate = $this->convertToSnapshot($payload);
+                if ($aggregate instanceof Aggregate) {
+                    return $aggregate->withVersion((int)$version);
+                }
+            }
+            throw new SerializationException("Failed to deserialize aggregate");
+        }
     }
 
 }
