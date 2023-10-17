@@ -3,10 +3,7 @@
 namespace J5ik2o\EventStoreAdapterPhp\Tests\Unit;
 
 use Aws\Sdk;
-use J5ik2o\EventStoreAdapterPhp\DefaultEventSerializer;
-use J5ik2o\EventStoreAdapterPhp\DefaultKeyResolver;
-use J5ik2o\EventStoreAdapterPhp\DefaultSnapshotSerializer;
-use J5ik2o\EventStoreAdapterPhp\Internal\EventStoreForDynamoDb;
+use J5ik2o\EventStoreAdapterPhp\EventStoreFactory;
 use J5ik2o\EventStoreAdapterPhp\Tests\AlreadyRenamedException;
 use J5ik2o\EventStoreAdapterPhp\Tests\DynamoDbUtils;
 use J5ik2o\EventStoreAdapterPhp\Tests\ReplayException;
@@ -80,14 +77,8 @@ class UserAccountRepositoryTest extends TestCase {
             $version = $snapshotMap["version"];
             return new UserAccount($id, $sequenceNumber, $name, $version);
         };
-        $keepSnapshot = true;
-        $keepSnapshotCount = 5;
-        $deleteTtlInMillSec = 1000;
-        $keyResolver = new DefaultKeyResolver();
-        $eventSerializer = new DefaultEventSerializer();
-        $snapshotSerializer = new DefaultSnapshotSerializer();
 
-        $eventStore = new EventStoreForDynamoDb(
+        $eventStore = EventStoreFactory::create(
             $client,
             $journalTableName,
             $snapshotTableName,
@@ -96,12 +87,6 @@ class UserAccountRepositoryTest extends TestCase {
             $shardCount,
             $eventConverter,
             $snapshotConverter,
-            $keepSnapshot,
-            $keepSnapshotCount,
-            $deleteTtlInMillSec,
-            $keyResolver,
-            $eventSerializer,
-            $snapshotSerializer
         );
 
         $userAccountRepository = new UserAccountRepository($eventStore);
