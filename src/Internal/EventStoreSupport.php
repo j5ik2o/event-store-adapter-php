@@ -2,8 +2,10 @@
 
 namespace J5ik2o\EventStoreAdapterPhp\Internal;
 
+use Aws\DynamoDb\Exception\DynamoDbException;
 use Aws\DynamoDb\Marshaler;
 use Aws\Result;
+use Exception;
 use J5ik2o\EventStoreAdapterPhp\Aggregate;
 use J5ik2o\EventStoreAdapterPhp\AggregateId;
 use J5ik2o\EventStoreAdapterPhp\DefaultEventSerializer;
@@ -12,8 +14,11 @@ use J5ik2o\EventStoreAdapterPhp\DefaultSnapshotSerializer;
 use J5ik2o\EventStoreAdapterPhp\Event;
 use J5ik2o\EventStoreAdapterPhp\EventSerializer;
 use J5ik2o\EventStoreAdapterPhp\KeyResolver;
+use J5ik2o\EventStoreAdapterPhp\OptimisticLockException;
+use J5ik2o\EventStoreAdapterPhp\PersistenceException;
 use J5ik2o\EventStoreAdapterPhp\SerializationException;
 use J5ik2o\EventStoreAdapterPhp\SnapshotSerializer;
+use Throwable;
 
 final class EventStoreSupport {
     private readonly string $journalTableName;
@@ -116,7 +121,7 @@ final class EventStoreSupport {
      * }
      * @throws SerializationException
      */
-    public function putSnapshot(Event $event, int $seqNr, Aggregate $aggregate): array {
+    public function generatePutSnapshotRequest(Event $event, int $seqNr, Aggregate $aggregate): array {
         $pkey = $this->keyResolver->resolvePartitionKey($event->getAggregateId(), $this->shardCount);
         $skey = $this->keyResolver->resolveSortKey($event->getAggregateId(), $seqNr);
         $payload = $this->snapshotSerializer->serialize($aggregate);
@@ -157,7 +162,7 @@ final class EventStoreSupport {
      * }
      * @throws SerializationException
      */
-    public function updateSnapshot(Event $event, int $seqNr, int $version, ?Aggregate $aggregate): array {
+    public function generateUpdateSnapshotRequest(Event $event, int $seqNr, int $version, ?Aggregate $aggregate): array {
         $pkey = $this->keyResolver->resolvePartitionKey($event->getAggregateId(), $this->shardCount);
         $skey = $this->keyResolver->resolveSortKey($event->getAggregateId(), $seqNr);
         $update = [
@@ -347,4 +352,41 @@ final class EventStoreSupport {
         }
     }
 
+    /**
+     * @param Exception $ex
+     * @param Event $event
+     * @param int $version
+     * @throws OptimisticLockException
+     * @throws PersistenceException
+     */
+    public function handleWriteException(Exception $ex, Event $event, int $version): void {
+        if ($ex instanceof DynamoDbException) {
+            if ($ex->getAwsErrorCode() === 'TransactionCanceledException') {
+                $message = $ex->getAwsErrorMessage() ?? '';
+                if (str_contains($message, 'ConditionalCheckFailed')) {
+                    throw new OptimisticLockException("Optimistic lock failure while updating event with ID: {$event->getId()}, Version: $version. AWS Error: $message");
+                }
+            }
+        }
+        throw new PersistenceException(message: "An error occurred while attempting to update event with ID: {$event->getId()}, Version: $version and its corresponding snapshot.", previous: $ex);
+    }
+
+    /**
+     * @param AggregateId $aggregateId
+     * @param Throwable $ex
+     * @return PersistenceException
+     */
+    public function convertToGetLatestSnapshotException(AggregateId $aggregateId, Throwable $ex): PersistenceException {
+        return new PersistenceException(message: "An error occurred while attempting to retrieve the latest snapshot for aggregate with ID: {$aggregateId->getValue()}.", previous: $ex);
+    }
+
+    /**
+     * @param AggregateId $aggregateId
+     * @param int $sequenceNumber
+     * @param Throwable $ex
+     * @return PersistenceException
+     */
+    public function convertToGetEventsException(AggregateId $aggregateId, int $sequenceNumber, Throwable $ex): PersistenceException {
+        return new PersistenceException(message: "An error occurred while attempting to retrieve events for aggregate with ID: {$aggregateId->getValue()} since sequence number: $sequenceNumber.", previous: $ex);
+    }
 }

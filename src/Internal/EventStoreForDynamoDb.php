@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace J5ik2o\EventStoreAdapterPhp\Internal;
 
 use Aws\DynamoDb\DynamoDbClient;
-use Exception;
+use Aws\DynamoDb\Exception\DynamoDbException;
 use J5ik2o\EventStoreAdapterPhp\Aggregate;
 use J5ik2o\EventStoreAdapterPhp\AggregateId;
 use J5ik2o\EventStoreAdapterPhp\DefaultEventSerializer;
@@ -16,6 +16,8 @@ use J5ik2o\EventStoreAdapterPhp\EventSerializer;
 use J5ik2o\EventStoreAdapterPhp\EventStore;
 use J5ik2o\EventStoreAdapterPhp\IllegalArgumentException;
 use J5ik2o\EventStoreAdapterPhp\KeyResolver;
+use J5ik2o\EventStoreAdapterPhp\OptimisticLockException;
+use J5ik2o\EventStoreAdapterPhp\PersistenceException;
 use J5ik2o\EventStoreAdapterPhp\SerializationException;
 use J5ik2o\EventStoreAdapterPhp\SnapshotSerializer;
 
@@ -239,29 +241,43 @@ final class EventStoreForDynamoDb implements EventStore {
 
     /**
      * @throws SerializationException
+     * @throws OptimisticLockException
+     * @throws PersistenceException
      */
     private function createEventAndSnapshot(Event $event, Aggregate $aggregate): void {
         $putJournal = $this->eventStoreSupport->generatePutJournalRequest($event);
-        $putSnapshot = $this->eventStoreSupport->putSnapshot($event, 0, $aggregate);
+        $putSnapshot = $this->eventStoreSupport->generatePutSnapshotRequest($event, 0, $aggregate);
         $transactItems = ['TransactItems' => [$putJournal, $putSnapshot]];
         // TODO: keepSnapshot
-        $this->client->transactWriteItems($transactItems);
+        try {
+            $this->client->transactWriteItems($transactItems);
+        } catch (DynamoDbException $ex) {
+            $this->eventStoreSupport->handleWriteException($ex, $event, $aggregate->getVersion());
+        }
     }
 
     /**
      * @throws SerializationException
+     * @throws OptimisticLockException
+     * @throws PersistenceException
      */
     private function updateEventAndSnapshotOpt(Event $event, int $version, ?Aggregate $aggregate): void {
         $putJournal = $this->eventStoreSupport->generatePutJournalRequest($event);
-        $updateSnapshot = $this->eventStoreSupport->updateSnapshot($event, 0, $version, $aggregate);
+        $updateSnapshot = $this->eventStoreSupport->generateUpdateSnapshotRequest($event, 0, $version, $aggregate);
         $transactItems = ['TransactItems' => [$putJournal, $updateSnapshot]];
-        $this->client->transactWriteItems($transactItems);
+        try {
+            $this->client->transactWriteItems($transactItems);
+        } catch (DynamoDbException $ex) {
+            $this->eventStoreSupport->handleWriteException($ex, $event, $version);
+        }
     }
 
 
     /**
-     * @throws SerializationException
      * @throws IllegalArgumentException
+     * @throws SerializationException
+     * @throws OptimisticLockException
+     * @throws PersistenceException
      */
     public function persistEvent(Event $event, int $version): void {
         if ($event->isCreated()) {
@@ -273,6 +289,8 @@ final class EventStoreForDynamoDb implements EventStore {
 
     /**
      * @throws SerializationException
+     * @throws OptimisticLockException
+     * @throws PersistenceException
      */
     public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): void {
         if ($event->isCreated()) {
@@ -284,22 +302,39 @@ final class EventStoreForDynamoDb implements EventStore {
     }
 
     /**
-     * @throws Exception
+     * @param AggregateId $aggregateId
+     * @return Aggregate|null
+     * @throws SerializationException
+     * @throws PersistenceException
      */
     public function getLatestSnapshotById(AggregateId $aggregateId): ?Aggregate {
-        $request = $this->eventStoreSupport->generateGetSnapshot($aggregateId);
-        $response = $this->client->query($request);
-        return $this->eventStoreSupport->convertFromResponseToSnapshot($response);
+        try {
+            $request = $this->eventStoreSupport->generateGetSnapshot($aggregateId);
+            $response = $this->client->query($request);
+            return $this->eventStoreSupport->convertFromResponseToSnapshot($response);
+        } catch (DynamoDbException $ex) {
+            throw $this->eventStoreSupport->convertToGetLatestSnapshotException($aggregateId, $ex);
+        }
     }
 
     /**
+     * @param AggregateId $aggregateId
+     * @param int $sequenceNumber
+     * @return array<Event>
      * @throws SerializationException
+     * @throws PersistenceException
      */
     public function getEventsByIdSinceSequenceNumber(AggregateId $aggregateId, int $sequenceNumber): array {
-        $request = $this->eventStoreSupport->generateGetEventsRequest($aggregateId, $sequenceNumber);
-        $response = $this->client->query($request);
-        return $this->eventStoreSupport->convertFromResponseToEvents($response);
+        try {
+            $request = $this->eventStoreSupport->generateGetEventsRequest($aggregateId, $sequenceNumber);
+            $response = $this->client->query($request);
+            return $this->eventStoreSupport->convertFromResponseToEvents($response);
+        } catch (DynamoDbException $ex) {
+            throw $this->eventStoreSupport->convertToGetEventsException($aggregateId, $sequenceNumber, $ex);
+        }
     }
+
+
 
 
 }
