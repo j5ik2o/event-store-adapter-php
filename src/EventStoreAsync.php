@@ -25,6 +25,8 @@ interface EventStoreAsync {
      * @param Event $event
      * @param int $version
      * @return PromiseInterface
+     * @throws IllegalArgumentException
+     * @throws SerializationException
      */
     public function persistEvent(Event $event, int $version): PromiseInterface;
 
@@ -34,6 +36,7 @@ interface EventStoreAsync {
      * @param Event $event
      * @param Aggregate $aggregate
      * @return PromiseInterface
+     * @throws SerializationException
      */
     public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): PromiseInterface;
 

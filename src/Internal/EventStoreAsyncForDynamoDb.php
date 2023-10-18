@@ -14,6 +14,7 @@ use J5ik2o\EventStoreAdapterPhp\EventSerializer;
 use J5ik2o\EventStoreAdapterPhp\EventStoreAsync;
 use J5ik2o\EventStoreAdapterPhp\IllegalArgumentException;
 use J5ik2o\EventStoreAdapterPhp\KeyResolver;
+use J5ik2o\EventStoreAdapterPhp\PersistenceException;
 use J5ik2o\EventStoreAdapterPhp\SerializationException;
 use J5ik2o\EventStoreAdapterPhp\SnapshotSerializer;
 
@@ -240,10 +241,13 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
      */
     private function createEventAndSnapshot(Event $event, Aggregate $aggregate): PromiseInterface {
         $putJournal = $this->eventStoreSupport->generatePutJournalRequest($event);
-        $putSnapshot = $this->eventStoreSupport->putSnapshot($event, 0, $aggregate);
+        $putSnapshot = $this->eventStoreSupport->generatePutSnapshotRequest($event, 0, $aggregate);
         $transactItems = ['TransactItems' => [$putJournal, $putSnapshot]];
         // TODO: keepSnapshot
-        return $this->client->transactWriteItemsAsync($transactItems);
+        $response = $this->client->transactWriteItemsAsync($transactItems);
+        return $response->then(onRejected: function ($ex) use ($event, $aggregate) {
+            $this->eventStoreSupport->handleWriteException($ex, $event, $aggregate->getVersion());
+        });
     }
 
     /**
@@ -251,9 +255,12 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
      */
     private function updateEventAndSnapshotOpt(Event $event, int $version, ?Aggregate $aggregate): PromiseInterface {
         $putJournal = $this->eventStoreSupport->generatePutJournalRequest($event);
-        $updateSnapshot = $this->eventStoreSupport->updateSnapshot($event, 0, $version, $aggregate);
+        $updateSnapshot = $this->eventStoreSupport->generateUpdateSnapshotRequest($event, 0, $version, $aggregate);
         $transactItems = ['TransactItems' => [$putJournal, $updateSnapshot]];
-        return $this->client->transactWriteItemsAsync($transactItems);
+        $response = $this->client->transactWriteItemsAsync($transactItems);
+        return $response->then(onRejected: function ($ex) use ($event, $version) {
+            $this->eventStoreSupport->handleWriteException($ex, $event, $version);
+        });
     }
 
     /**
@@ -283,6 +290,8 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
         $response = $this->client->queryAsync($request);
         return $response->then(function ($response) {
             return $this->eventStoreSupport->convertFromResponseToSnapshot($response);
+        }, function ($ex) use ($aggregateId) {
+            throw new PersistenceException(message: "An error occurred while attempting to retrieve the latest snapshot for aggregate with ID: {$aggregateId->getValue()}.", previous: $ex);
         });
     }
 
@@ -291,8 +300,9 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
         $response = $this->client->queryAsync($request);
         return $response->then(function ($response) {
             return $this->eventStoreSupport->convertFromResponseToEvents($response);
+        }, function ($ex) use ($aggregateId, $sequenceNumber) {
+            throw new PersistenceException(message: "An error occurred while attempting to retrieve events for aggregate with ID: {$aggregateId->getValue()} since sequence number: $sequenceNumber.", previous: $ex);
         });
     }
-
 
 }
