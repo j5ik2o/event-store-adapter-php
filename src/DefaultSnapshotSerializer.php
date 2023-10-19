@@ -11,7 +11,7 @@ final class DefaultSnapshotSerializer implements SnapshotSerializer {
     public function serialize(Aggregate $aggregate): string {
         $result = json_encode($aggregate, JSON_UNESCAPED_UNICODE);
         if (!$result) {
-            throw new SerializationException("Failed to serialize aggregate");
+            throw new SerializationException("Failed to serialize the aggregate");
         }
         return $result;
     }
@@ -22,7 +22,7 @@ final class DefaultSnapshotSerializer implements SnapshotSerializer {
     public function deserialize(string $data): array {
         $result = json_decode($data, true);
         if (!is_array($result)) {
-            throw new SerializationException("Failed to deserialize aggregate");
+            throw new SerializationException("Failed to deserialize the aggregate");
         }
         return $result;
     }

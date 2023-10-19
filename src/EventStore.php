@@ -25,7 +25,10 @@ interface EventStore {
      *
      * @param Event $event
      * @param int $version
-     * @return void
+     * @throws IllegalArgumentException
+     * @throws SerializationException
+     * @throws OptimisticLockException
+     * @throws PersistenceException
      */
     public function persistEvent(Event $event, int $version): void;
 
@@ -34,7 +37,9 @@ interface EventStore {
      *
      * @param Event $event
      * @param Aggregate $aggregate
-     * @return void
+     * @throws SerializationException
+     * @throws OptimisticLockException
+     * @throws PersistenceException
      */
     public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): void;
 
@@ -43,6 +48,8 @@ interface EventStore {
      *
      * @param AggregateId $aggregateId
      * @return Aggregate|null
+     * @throws SerializationException
+     * @throws PersistenceException
      */
     public function getLatestSnapshotById(AggregateId $aggregateId): ?Aggregate;
 
@@ -52,6 +59,8 @@ interface EventStore {
      * @param AggregateId $aggregateId
      * @param int $sequenceNumber
      * @return array<Event>
+     * @throws SerializationException
+     * @throws PersistenceException
      */
     public function getEventsByIdSinceSequenceNumber(AggregateId $aggregateId, int $sequenceNumber): array;
 }
