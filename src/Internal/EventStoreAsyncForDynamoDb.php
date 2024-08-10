@@ -18,6 +18,15 @@ use J5ik2o\EventStoreAdapterPhp\PersistenceException;
 use J5ik2o\EventStoreAdapterPhp\SerializationException;
 use J5ik2o\EventStoreAdapterPhp\SnapshotSerializer;
 
+/**
+ * Class EventStoreAsyncForDynamoDb
+ *
+ * This class implements the EventStoreAsync interface.
+ *
+ * Example Usage:
+ * $eventStore = new EventStoreAsyncForDynamoDb($client, $journalTableName, $snapshotTableName, $journalAidIndexName, $snapshotAidIndexName, $shardCount, $eventConverter, $snapshotConverter);
+ * $eventStore->persistEvent($event, $version);
+ */
 final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
     private readonly DynamoDbClient $client;
 
@@ -50,6 +59,24 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
     private readonly EventStoreSupport $eventStoreSupport;
 
 
+    /**
+     * EventStoreAsyncForDynamoDb constructor.
+     *
+     * @param DynamoDbClient $client
+     * @param string $journalTableName
+     * @param string $snapshotTableName
+     * @param string $journalAidIndexName
+     * @param string $snapshotAidIndexName
+     * @param int $shardCount
+     * @param callable $eventConverter
+     * @param callable $snapshotConverter
+     * @param bool|null $keepSnapshot
+     * @param int|null $keepSnapshotCount
+     * @param int|null $deleteTtlInMillSec
+     * @param KeyResolver|null $keyResolver
+     * @param EventSerializer|null $eventSerializer
+     * @param SnapshotSerializer|null $snapshotSerializer
+     */
     public function __construct(
         DynamoDbClient      $client,
         string              $journalTableName,

@@ -286,6 +286,47 @@ final class EventStoreSupport {
         ];
     }
 
+    public function getSnapshotCountRequest(AggregateId $aggregateId): array {
+        return [
+            'TableName' => $this->snapshotTableName,
+            'IndexName' => $this->snapshotAidIndexName,
+            'KeyConditionExpression' => '#aid = :aid',
+            'ExpressionAttributeNames' => [
+                '#aid' => 'aid',
+            ],
+            'ExpressionAttributeValues' => $this->marshaler->marshalItem([
+                ':aid' => $aggregateId->asString(),
+            ]),
+            'Select' => 'COUNT',
+        ];
+    }
+
+    public function getLastSnapshotKeysRequest(AggregateId $aggregateId, int $limit): array {
+        $names = [
+            '#aid' => 'aid',
+            '#seq_nr' => 'seq_nr',
+        ];
+        $values = $this->marshaler->marshalItem([
+            ':aid' => $aggregateId->asString(),
+            ':seq_nr' => 0,
+        ]);
+        $request = [
+            'TableName' => $this->snapshotTableName,
+            'IndexName' => $this->snapshotAidIndexName,
+            'KeyConditionExpression' => '#aid = :aid AND #seq_nr > :seq_nr',
+            'ExpressionAttributeNames' => $names,
+            'ExpressionAttributeValues' => $values,
+            'ScanIndexForward' => false,
+            'Limit' => $limit,
+        ];
+        if ($this->deleteTtlInMillSec !== 0) {
+            $request['FilterExpression'] = '#ttl = :ttl';
+            $request['ExpressionAttributeNames']['#ttl'] = 'ttl';
+            $request['ExpressionAttributeValues'][':ttl'] = $this->marshaler->marshalValue(0);
+        }
+        return $request;
+    }
+
     /**
      * Converts an event from a payload.
      *
@@ -310,6 +351,26 @@ final class EventStoreSupport {
         return ($this->snapshotConverter)($payloadMap);
     }
 
+    /**
+     * @param Result $response
+     * @return array<array{ pkey: string, skey: string }>
+     */
+    // @phpstan-ignore-next-line
+    public function convertFromResponseToPkeySkeyArray(Result $response): array {
+        $result = [];
+        $items = $response->get('Items') ?? [];
+        if (is_iterable($items)) {
+            foreach ($items as $item) {
+                $pkey = $item['pkey']['S'];
+                $skey = $item['skey']['S'];
+                $result[] = [
+                    'pkey' => (string)$pkey,
+                    'skey' => (string)$skey,
+                ];
+            }
+        }
+        return $result;
+    }
 
     /**
      * @param Result $response
@@ -328,6 +389,7 @@ final class EventStoreSupport {
         }
         return $result;
     }
+
 
     /**
      * @param Result $response
@@ -388,5 +450,16 @@ final class EventStoreSupport {
      */
     public function convertToGetEventsException(AggregateId $aggregateId, int $sequenceNumber, Throwable $ex): PersistenceException {
         return new PersistenceException(message: "An error occurred while attempting to retrieve events for aggregate with ID: {$aggregateId->getValue()} since sequence number: $sequenceNumber.", previous: $ex);
+    }
+
+    public function generateDeleteSnapshotRequests(array $keys): array {
+            return [
+                'DeleteRequest' => [
+                    'Key' => $this->marshaler->marshalItem([
+                        'pkey' => $keys['pkey'],
+                        'skey' => $keys['skey'],
+                    ]),
+                ],
+            ];
     }
 }

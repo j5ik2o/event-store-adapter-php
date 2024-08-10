@@ -272,6 +272,43 @@ final class EventStoreForDynamoDb implements EventStore {
         }
     }
 
+    private function getSnapshotCount(AggregateId $aggregateId): int {
+        $request = $this->eventStoreSupport->getSnapshotCountRequest($aggregateId);
+        $response = $this->client->query($request);
+        return $response->count();
+    }
+
+    /**
+     * @param AggregateId $aggregateId
+     * @param int $limit
+     * @return array<array{ pkey: string, skey: string }>
+     */
+    private function getLastSnapshotKeys(AggregateId $aggregateId, int $limit): array {
+        $request = $this->eventStoreSupport->getLastSnapshotKeysRequest($aggregateId, $limit);
+        $response = $this->client->query($request);
+        return $this->eventStoreSupport->convertFromResponseToPkeySkeyArray($response);
+    }
+
+    private function deleteExcessSnapshots(AggregateId $aggregateId): void {
+        if ($this->keepSnapshotCount !== 0 && $this->deleteTtlInMillSec !== 0) {
+            $snapshotCount = $this->getSnapshotCount($aggregateId);
+            if ($snapshotCount == 0) {
+                return;
+            }
+            $snapshotCount -= 1;
+            $excessCount = $snapshotCount - $this->keepSnapshotCount;
+            if ($excessCount > 0) {
+                /** @var array<array{ pkey: string, skey: string}> $keys */
+                $keys = $this->getLastSnapshotKeys($aggregateId, $excessCount);
+                $requests = $this->eventStoreSupport->generateDeleteSnapshotRequests($keys);
+                $this->client->batchWriteItem([
+                    'RequestItems' => [
+                        $this->snapshotTableName => $requests,
+                    ],
+                ]);
+            }
+        }
+    }
 
     /**
      * @throws IllegalArgumentException
@@ -333,8 +370,6 @@ final class EventStoreForDynamoDb implements EventStore {
             throw $this->eventStoreSupport->convertToGetEventsException($aggregateId, $sequenceNumber, $ex);
         }
     }
-
-
 
 
 }
