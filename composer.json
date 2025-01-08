@@ -35,9 +35,9 @@
     "test": "phpunit --testdox tests",
     "cs": "php-cs-fixer fix --dry-run",
     "cs:fix": "php-cs-fixer fix",
-    "phpstan": "phpstan analyse",
     "fmt": "composer run cs:fix",
-    "lint": "composer run cs && composer run phpstan"
+    "lint": "composer run cs && composer run phpstan",
+    "phpstan": "phpstan analyse --memory-limit=512M"
   },
   "config": {
     "allow-plugins": {
