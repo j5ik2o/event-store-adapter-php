@@ -43,6 +43,6 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
       - name: Run docker-compose
-        run: docker-compose up -d
+        run: docker compose up -d
       - name: Run test suite
         run: composer run test
