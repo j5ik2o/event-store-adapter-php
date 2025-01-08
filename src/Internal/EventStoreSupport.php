@@ -453,13 +453,13 @@ final class EventStoreSupport {
     }
 
     public function generateDeleteSnapshotRequests(array $keys): array {
-            return [
-                'DeleteRequest' => [
-                    'Key' => $this->marshaler->marshalItem([
-                        'pkey' => $keys['pkey'],
-                        'skey' => $keys['skey'],
-                    ]),
-                ],
-            ];
+        return [
+            'DeleteRequest' => [
+                'Key' => $this->marshaler->marshalItem([
+                    'pkey' => $keys['pkey'],
+                    'skey' => $keys['skey'],
+                ]),
+            ],
+        ];
     }
 }
