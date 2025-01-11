@@ -50,7 +50,7 @@ final class UserAccountRepository {
 The following is an example of the repository usage.
 
 ```php
-$eventStore = EventStoreFactory：：create(
+$eventStore = EventStoreFactory::create(
   $client,
   $journalTableName,
   $snapshotTableName,
