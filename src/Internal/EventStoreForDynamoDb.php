@@ -289,6 +289,10 @@ final class EventStoreForDynamoDb implements EventStore {
         return $this->eventStoreSupport->convertFromResponseToPkeySkeyArray($response);
     }
 
+    /**
+     * @internal This method is used internally for snapshot management
+     * @phpstan-ignore-next-line
+     */
     private function deleteExcessSnapshots(AggregateId $aggregateId): void {
         if ($this->keepSnapshotCount !== 0 && $this->deleteTtlInMillSec !== 0) {
             $snapshotCount = $this->getSnapshotCount($aggregateId);

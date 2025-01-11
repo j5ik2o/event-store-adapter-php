@@ -1,6 +1,6 @@
 # event-store-adapter-php
 
-[![CI](https://github.com/j5ik2o/event-store-adapter-php/actions/workflows/ci.yml/badge.svg)](https://github.com/j5ik2o/event-store-adapter-js/actions/workflows/ci.yml)
+[![CI](https://github.com/j5ik2o/event-store-adapter-php/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/j5ik2o/event-store-adapter-php/actions/workflows/ci.yml)
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/j5ik2o/event-store-adapter-php.svg?style=flat)](https://packagist.org/packages/j5ik2o/event-store-adapter-php)
 [![Renovate](https://img.shields.io/badge/renovate-enabled-brightgreen.svg)](https://renovatebot.com)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)

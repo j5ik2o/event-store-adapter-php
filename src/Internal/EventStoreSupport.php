@@ -43,7 +43,6 @@ final class EventStoreSupport {
     // @phpstan-ignore-next-line
     private readonly int $keepSnapshotCount;
 
-    // @phpstan-ignore-next-line
     private readonly int $deleteTtlInMillSec;
 
     private readonly KeyResolver $keyResolver;
@@ -286,6 +285,16 @@ final class EventStoreSupport {
         ];
     }
 
+    /**
+     * @return array{
+     *   TableName: string,
+     *   IndexName: string,
+     *   KeyConditionExpression: string,
+     *   ExpressionAttributeNames: array<string, string>,
+     *   ExpressionAttributeValues: array<string, mixed>,
+     *   Select: string
+     * }
+     */
     public function getSnapshotCountRequest(AggregateId $aggregateId): array {
         return [
             'TableName' => $this->snapshotTableName,
@@ -301,6 +310,18 @@ final class EventStoreSupport {
         ];
     }
 
+    /**
+     * @return array{
+     *   TableName: string,
+     *   IndexName: string,
+     *   KeyConditionExpression: string,
+     *   ExpressionAttributeNames: array<string, string>,
+     *   ExpressionAttributeValues: array<string, mixed>,
+     *   ScanIndexForward: bool,
+     *   Limit: int,
+     *   FilterExpression?: string
+     * }
+     */
     public function getLastSnapshotKeysRequest(AggregateId $aggregateId, int $limit): array {
         $names = [
             '#aid' => 'aid',
@@ -354,8 +375,8 @@ final class EventStoreSupport {
     /**
      * @param Result $response
      * @return array<array{ pkey: string, skey: string }>
+     * @phpstan-ignore-next-line
      */
-    // @phpstan-ignore-next-line
     public function convertFromResponseToPkeySkeyArray(Result $response): array {
         $result = [];
         $items = $response->get('Items') ?? [];
@@ -452,14 +473,18 @@ final class EventStoreSupport {
         return new PersistenceException(message: "An error occurred while attempting to retrieve events for aggregate with ID: {$aggregateId->getValue()} since sequence number: $sequenceNumber.", previous: $ex);
     }
 
+    /**
+     * @param array<array{ pkey: string, skey: string }>$keys
+     * @return array{DeleteRequest: array{Key: array<string, mixed>}}
+     */
     public function generateDeleteSnapshotRequests(array $keys): array {
-            return [
-                'DeleteRequest' => [
-                    'Key' => $this->marshaler->marshalItem([
-                        'pkey' => $keys['pkey'],
-                        'skey' => $keys['skey'],
-                    ]),
-                ],
-            ];
+        return [
+            'DeleteRequest' => [
+                'Key' => $this->marshaler->marshalItem([
+                    'pkey' => $keys['pkey'],
+                    'skey' => $keys['skey'],
+                ]),
+            ],
+        ];
     }
 }
