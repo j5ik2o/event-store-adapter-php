@@ -25,6 +25,10 @@ final class EventStoreInMemory implements EventStore {
         $this->snapshots = [];
     }
 
+    public function withKeepSnapshot(bool $keepSnapshot): EventStore {
+        return $this;
+    }
+
     public function withDeleteTtl(int $deleteTtlInMillSec): EventStore {
         return $this;
     }
@@ -106,4 +110,6 @@ final class EventStoreInMemory implements EventStore {
         }
         return $result;
     }
+
+
 }
