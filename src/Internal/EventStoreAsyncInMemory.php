@@ -13,7 +13,7 @@ use J5ik2o\EventStoreAdapterPhp\KeyResolver;
 use J5ik2o\EventStoreAdapterPhp\SnapshotSerializer;
 use J5ik2o\EventStoreAdapterPhp\OptimisticLockException;
 
-class EventStoreAsyncInMemory implements EventStoreAsync {
+final class EventStoreAsyncInMemory implements EventStoreAsync {
     private const INITIAL_VERSION = 1;
     /** @var array<string, array<Event>> */
     private array $events;

@@ -11,7 +11,7 @@ use J5ik2o\EventStoreAdapterPhp\KeyResolver;
 use J5ik2o\EventStoreAdapterPhp\OptimisticLockException;
 use J5ik2o\EventStoreAdapterPhp\SnapshotSerializer;
 
-class EventStoreInMemory implements EventStore {
+final class EventStoreInMemory implements EventStore {
     private const INITIAL_VERSION = 1;
 
     /** @var array<string, array<Event>> */
@@ -23,10 +23,6 @@ class EventStoreInMemory implements EventStore {
     public function __construct() {
         $this->events = [];
         $this->snapshots = [];
-    }
-
-    public function withKeepSnapshot(bool $keepSnapshot): EventStore {
-        return $this;
     }
 
     public function withDeleteTtl(int $deleteTtlInMillSec): EventStore {
