@@ -52,7 +52,7 @@ class EventStoreAsyncInMemory implements EventStoreAsync {
 
     public function persistEvent(Event $event, int $version): PromiseInterface {
         $promise = new FulfilledPromise([$event, $version]);
-        $promise->then(function ($arg) {
+        return $promise->then(function ($arg) {
             /** @var Event $event */
             /** @var int $version */
             [$event, $version] = $arg;
@@ -75,12 +75,11 @@ class EventStoreAsyncInMemory implements EventStoreAsync {
             $snapshot = $snapshot->withVersion($newVersion);
             $this->snapshots[$aggregateId] = $snapshot;
         });
-        return $promise;
     }
 
     public function persistEventAndSnapshot(Event $event, Aggregate $aggregate): PromiseInterface {
         $promise = new FulfilledPromise([$event, $aggregate]);
-        $promise->then(function ($arg) {
+        return $promise->then(function ($arg) {
             /** @var Event $event */
             /** @var Aggregate $aggregate */
             [$event, $aggregate] = $arg;
@@ -100,24 +99,22 @@ class EventStoreAsyncInMemory implements EventStoreAsync {
             $this->snapshots[$aggregateId] = $aggregate->withVersion($newVersion);
             return null;
         });
-        return $promise;
     }
 
     public function getLatestSnapshotById(AggregateId $aggregateId): PromiseInterface {
         $promise = new FulfilledPromise($aggregateId);
-        $promise->then(function (AggregateId $aggregateId) {
+        return $promise->then(function (AggregateId $aggregateId) {
             $id = $aggregateId->asString();
             if (isset($this->snapshots[$id])) {
                 return $this->snapshots[$id];
             }
             return null;
         });
-        return $promise;
     }
 
     public function getEventsByIdSinceSequenceNumber(AggregateId $aggregateId, int $sequenceNumber): PromiseInterface {
         $promise = new FulfilledPromise([$aggregateId, $sequenceNumber]);
-        $promise->then(function ($arg) {
+        return $promise->then(function ($arg) {
             /** @var AggregateId $aggregateId */
             /** @var int $sequenceNumber */
             [$aggregateId, $sequenceNumber] = $arg;
@@ -135,6 +132,5 @@ class EventStoreAsyncInMemory implements EventStoreAsync {
             }
             return $result;
         });
-        return $promise;
     }
 }
