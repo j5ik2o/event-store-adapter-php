@@ -56,7 +56,7 @@ class EventStoreInMemory implements EventStore {
 
         $aggregateId = $event->getAggregateId()->asString();
 
-        if ($this->snapshots[$aggregateId]->getVersion() !== $version) {
+        if (!isset($this->snapshots[$aggregateId]) || $this->snapshots[$aggregateId]->getVersion() !== $version) {
             throw new OptimisticLockException(
                 'Transaction write was canceled due to conditional check failure'
             );
@@ -74,9 +74,8 @@ class EventStoreInMemory implements EventStore {
         $aggregateId = $event->getAggregateId()->asString();
         $newVersion = self::INITIAL_VERSION;
 
-        if (!$event->isCreated()) {
-            $version = $this->snapshots[$aggregateId]->getVersion();
-            if ($version !== $aggregate->getVersion()) {
+        if (!$event->isCreated() && isset($this->snapshots[$aggregateId])) {
+            if ($this->snapshots[$aggregateId]->getVersion() !== $aggregate->getVersion()) {
                 throw new OptimisticLockException(
                     'Transaction write was canceled due to conditional check failure'
                 );
