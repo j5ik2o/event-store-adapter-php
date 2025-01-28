@@ -7,8 +7,18 @@ namespace J5ik2o\EventStoreAdapterPhp;
 use Aws\DynamoDb\DynamoDbClient;
 use J5ik2o\EventStoreAdapterPhp\Internal\EventStoreAsyncForDynamoDb;
 use J5ik2o\EventStoreAdapterPhp\Internal\EventStoreForDynamoDb;
+use J5ik2o\EventStoreAdapterPhp\Internal\EventStoreAsyncInMemory;
+use J5ik2o\EventStoreAdapterPhp\Internal\EventStoreInMemory;
 
 final class EventStoreFactory {
+    public static function createInMemory(): EventStore {
+        return new EventStoreInMemory();
+    }
+
+    public static function createInMemoryAsync(): EventStoreAsync {
+        return new EventStoreAsyncInMemory();
+    }
+
     public static function create(
         DynamoDbClient $client,
         string         $journalTableName,
