@@ -1,7 +1,7 @@
 version: '3'
 services:
   dynamodb-local:
-    image: amazon/dynamodb-local:2.6.0
+    image: amazon/dynamodb-local:2.6.1
     hostname: dynamodb-local
     environment:
       JAVA_OPTS: -Xms2g -Xmx2g
