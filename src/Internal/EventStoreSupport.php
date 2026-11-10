@@ -5,7 +5,6 @@ namespace J5ik2o\EventStoreAdapterPhp\Internal;
 use Aws\DynamoDb\Exception\DynamoDbException;
 use Aws\DynamoDb\Marshaler;
 use Aws\Result;
-use Exception;
 use J5ik2o\EventStoreAdapterPhp\Aggregate;
 use J5ik2o\EventStoreAdapterPhp\AggregateId;
 use J5ik2o\EventStoreAdapterPhp\DefaultEventSerializer;
@@ -235,7 +234,7 @@ final class EventStoreSupport {
      *  IndexName: string,
      *  KeyConditionExpression: string,
      *  ExpressionAttributeNames: array<string, string>,
-     *  ExpressionAttributeValues: array<string, mixed>,
+     *  ExpressionAttributeValues: array<string, array{S: string}|array{N: string}>,
      *  Limit: int
      * }
      */
@@ -248,10 +247,10 @@ final class EventStoreSupport {
                 '#aid' => 'aid',
                 '#seq_nr' => 'seq_nr',
             ],
-            'ExpressionAttributeValues' => $this->marshaler->marshalItem([
-                ':aid' => $aggregateId->asString(),
-                ':seq_nr' => 0,
-            ]),
+            'ExpressionAttributeValues' => [
+                ':aid' => ['S' => $aggregateId->asString()],
+                ':seq_nr' => ['N' => '0'],
+            ],
             'Limit' => 1,
         ];
     }
@@ -266,7 +265,7 @@ final class EventStoreSupport {
      *  IndexName: string,
      *  KeyConditionExpression: string,
      *  ExpressionAttributeNames: array<string, string>,
-     *  ExpressionAttributeValues: array<string, mixed>,
+     *  ExpressionAttributeValues: array<string, array{S: string}|array{N: string}>,
      * }
      */
     public function generateGetEventsRequest(AggregateId $aggregateId, int $sequenceNumber): array {
@@ -278,10 +277,10 @@ final class EventStoreSupport {
                 '#aid' => 'aid',
                 '#seq_nr' => 'seq_nr',
             ],
-            'ExpressionAttributeValues' => $this->marshaler->marshalItem([
-                ':aid' => $aggregateId->asString(),
-                ':seq_nr' => $sequenceNumber,
-            ]),
+            'ExpressionAttributeValues' => [
+                ':aid' => ['S' => $aggregateId->asString()],
+                ':seq_nr' => ['N' => (string)$sequenceNumber],
+            ],
         ];
     }
 
@@ -291,8 +290,8 @@ final class EventStoreSupport {
      *   IndexName: string,
      *   KeyConditionExpression: string,
      *   ExpressionAttributeNames: array<string, string>,
-     *   ExpressionAttributeValues: array<string, mixed>,
-     *   Select: string
+     *   ExpressionAttributeValues: array<string, array{S: string}|array{N: string}>,
+     *   Select: 'COUNT'
      * }
      */
     public function getSnapshotCountRequest(AggregateId $aggregateId): array {
@@ -303,9 +302,9 @@ final class EventStoreSupport {
             'ExpressionAttributeNames' => [
                 '#aid' => 'aid',
             ],
-            'ExpressionAttributeValues' => $this->marshaler->marshalItem([
-                ':aid' => $aggregateId->asString(),
-            ]),
+            'ExpressionAttributeValues' => [
+                ':aid' => ['S' => $aggregateId->asString()],
+            ],
             'Select' => 'COUNT',
         ];
     }
@@ -316,7 +315,7 @@ final class EventStoreSupport {
      *   IndexName: string,
      *   KeyConditionExpression: string,
      *   ExpressionAttributeNames: array<string, string>,
-     *   ExpressionAttributeValues: array<string, mixed>,
+     *   ExpressionAttributeValues: array<string, array{S: string}|array{N: string}>,
      *   ScanIndexForward: bool,
      *   Limit: int,
      *   FilterExpression?: string
@@ -327,10 +326,10 @@ final class EventStoreSupport {
             '#aid' => 'aid',
             '#seq_nr' => 'seq_nr',
         ];
-        $values = $this->marshaler->marshalItem([
-            ':aid' => $aggregateId->asString(),
-            ':seq_nr' => 0,
-        ]);
+        $values = [
+            ':aid' => ['S' => $aggregateId->asString()],
+            ':seq_nr' => ['N' => '0'],
+        ];
         $request = [
             'TableName' => $this->snapshotTableName,
             'IndexName' => $this->snapshotAidIndexName,
@@ -343,7 +342,7 @@ final class EventStoreSupport {
         if ($this->deleteTtlInMillSec !== 0) {
             $request['FilterExpression'] = '#ttl = :ttl';
             $request['ExpressionAttributeNames']['#ttl'] = 'ttl';
-            $request['ExpressionAttributeValues'][':ttl'] = $this->marshaler->marshalValue(0);
+            $request['ExpressionAttributeValues'][':ttl'] = ['N' => '0'];
         }
         return $request;
     }
@@ -436,13 +435,13 @@ final class EventStoreSupport {
     }
 
     /**
-     * @param Exception $ex
+     * @param Throwable $ex
      * @param Event $event
      * @param int $version
      * @throws OptimisticLockException
      * @throws PersistenceException
      */
-    public function handleWriteException(Exception $ex, Event $event, int $version): void {
+    public function handleWriteException(Throwable $ex, Event $event, int $version): void {
         if ($ex instanceof DynamoDbException) {
             if ($ex->getAwsErrorCode() === 'TransactionCanceledException') {
                 $message = $ex->getAwsErrorMessage() ?? '';
@@ -474,17 +473,21 @@ final class EventStoreSupport {
     }
 
     /**
-     * @param array<array{ pkey: string, skey: string }>$keys
-     * @return array{DeleteRequest: array{Key: array<string, mixed>}}
+     * @param array<array{pkey: string, skey: string}> $keys
+     * @return list<array{DeleteRequest: array{Key: array{pkey: array{S: string}, skey: array{S: string}}}}>
      */
     public function generateDeleteSnapshotRequests(array $keys): array {
-        return [
-            'DeleteRequest' => [
-                'Key' => $this->marshaler->marshalItem([
-                    'pkey' => $keys['pkey'],
-                    'skey' => $keys['skey'],
-                ]),
-            ],
-        ];
+        $requests = [];
+        foreach ($keys as $key) {
+            $requests[] = [
+                'DeleteRequest' => [
+                    'Key' => [
+                        'pkey' => ['S' => $key['pkey']],
+                        'skey' => ['S' => $key['skey']],
+                    ],
+                ],
+            ];
+        }
+        return $requests;
     }
 }

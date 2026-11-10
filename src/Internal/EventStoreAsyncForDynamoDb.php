@@ -4,6 +4,8 @@ namespace J5ik2o\EventStoreAdapterPhp\Internal;
 
 use Aws\DynamoDb\DynamoDbClient;
 use GuzzleHttp\Promise\PromiseInterface;
+use GuzzleHttp\Promise\Create;
+use Aws\Result;
 use J5ik2o\EventStoreAdapterPhp\Aggregate;
 use J5ik2o\EventStoreAdapterPhp\AggregateId;
 use J5ik2o\EventStoreAdapterPhp\DefaultEventSerializer;
@@ -273,7 +275,7 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
         // TODO: keepSnapshot
         $response = $this->client->transactWriteItemsAsync($transactItems);
         return $response->then(onRejected: function ($ex) use ($event, $aggregate) {
-            $this->eventStoreSupport->handleWriteException($ex, $event, $aggregate->getVersion());
+            $this->eventStoreSupport->handleWriteException(Create::exceptionFor($ex), $event, $aggregate->getVersion());
         });
     }
 
@@ -286,7 +288,7 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
         $transactItems = ['TransactItems' => [$putJournal, $updateSnapshot]];
         $response = $this->client->transactWriteItemsAsync($transactItems);
         return $response->then(onRejected: function ($ex) use ($event, $version) {
-            $this->eventStoreSupport->handleWriteException($ex, $event, $version);
+            $this->eventStoreSupport->handleWriteException(Create::exceptionFor($ex), $event, $version);
         });
     }
 
@@ -316,9 +318,12 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
         $request = $this->eventStoreSupport->generateGetSnapshot($aggregateId);
         $response = $this->client->queryAsync($request);
         return $response->then(function ($response) {
+            if (!$response instanceof Result) {
+                throw new \UnexpectedValueException("DynamoDB query must resolve to Aws\\Result");
+            }
             return $this->eventStoreSupport->convertFromResponseToSnapshot($response);
         }, function ($ex) use ($aggregateId) {
-            throw new PersistenceException(message: "An error occurred while attempting to retrieve the latest snapshot for aggregate with ID: {$aggregateId->getValue()}.", previous: $ex);
+            throw new PersistenceException(message: "An error occurred while attempting to retrieve the latest snapshot for aggregate with ID: {$aggregateId->getValue()}.", previous: Create::exceptionFor($ex));
         });
     }
 
@@ -326,9 +331,12 @@ final class EventStoreAsyncForDynamoDb implements EventStoreAsync {
         $request = $this->eventStoreSupport->generateGetEventsRequest($aggregateId, $sequenceNumber);
         $response = $this->client->queryAsync($request);
         return $response->then(function ($response) {
+            if (!$response instanceof Result) {
+                throw new \UnexpectedValueException("DynamoDB query must resolve to Aws\\Result");
+            }
             return $this->eventStoreSupport->convertFromResponseToEvents($response);
         }, function ($ex) use ($aggregateId, $sequenceNumber) {
-            throw new PersistenceException(message: "An error occurred while attempting to retrieve events for aggregate with ID: {$aggregateId->getValue()} since sequence number: $sequenceNumber.", previous: $ex);
+            throw new PersistenceException(message: "An error occurred while attempting to retrieve events for aggregate with ID: {$aggregateId->getValue()} since sequence number: $sequenceNumber.", previous: Create::exceptionFor($ex));
         });
     }
 
